@@ -7,7 +7,8 @@ from services.quote_service import (
     get_quote_by_id,
     create_quote,
     delete_quote,
-    update_quote
+    update_quote,
+    get_quotes_by_category
 )
 
 router = APIRouter()
@@ -35,11 +36,17 @@ async def get_quote(quote_id: int):
     return get_quote_by_id(quote_id)
 
 
+@router.get("/quotes/category/{category}")
+async def quotes_by_category(category: str):
+    return get_quotes_by_category(category)
+
+
 @router.post("/quotes")
 async def create_new_quote(quote: Quote):
     return create_quote(
         author=quote.author,
-        text=quote.text
+        text=quote.text,
+        category=quote.category
     )
 
 
@@ -51,12 +58,11 @@ async def update_existing_quote(
     return update_quote(
         quote_id=quote_id,
         author=quote.author,
-        text=quote.text
+        text=quote.text,
+        category=quote.category
     )
 
 
 @router.delete("/quotes/{quote_id}")
-async def delete_existing_quote(
-    quote_id: int
-):
+async def delete_existing_quote(quote_id: int):
     return delete_quote(quote_id)

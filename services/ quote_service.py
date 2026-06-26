@@ -24,11 +24,12 @@ def get_quote_by_id(quote_id: int):
     )
 
 
-def create_quote(author: str, text: str):
+def create_quote(author: str, text: str, category: str):
     new_quote = {
         "id": len(quotes) + 1,
         "author": author,
-        "text": text
+        "text": text,
+        "category": category
     }
 
     quotes.append(new_quote)
@@ -51,11 +52,17 @@ def delete_quote(quote_id: int):
     )
 
 
-def update_quote(quote_id: int, author: str, text: str):
+def update_quote(
+    quote_id: int,
+    author: str,
+    text: str,
+    category: str
+):
     for quote in quotes:
         if quote["id"] == quote_id:
             quote["author"] = author
             quote["text"] = text
+            quote["category"] = category
 
             return quote
 
@@ -63,3 +70,13 @@ def update_quote(quote_id: int, author: str, text: str):
         status_code=404,
         detail="Quote not found"
     )
+
+
+def get_quotes_by_category(category: str):
+    result = []
+
+    for quote in quotes:
+        if quote["category"].lower() == category.lower():
+            result.append(quote)
+
+    return result

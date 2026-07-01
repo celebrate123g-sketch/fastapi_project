@@ -29,27 +29,13 @@ def create_quote(author: str, text: str, category: str):
         "id": len(quotes) + 1,
         "author": author,
         "text": text,
-        "category": category
+        "category": category,
+        "favorite": False
     }
 
     quotes.append(new_quote)
 
     return new_quote
-
-
-def delete_quote(quote_id: int):
-    for quote in quotes:
-        if quote["id"] == quote_id:
-            quotes.remove(quote)
-
-            return {
-                "message": "Quote deleted"
-            }
-
-    raise HTTPException(
-        status_code=404,
-        detail="Quote not found"
-    )
 
 
 def update_quote(
@@ -72,11 +58,77 @@ def update_quote(
     )
 
 
+def delete_quote(quote_id: int):
+    for quote in quotes:
+        if quote["id"] == quote_id:
+            quotes.remove(quote)
+
+            return {
+                "message": "Quote deleted"
+            }
+
+    raise HTTPException(
+        status_code=404,
+        detail="Quote not found"
+    )
+
+
 def get_quotes_by_category(category: str):
     result = []
 
     for quote in quotes:
         if quote["category"].lower() == category.lower():
             result.append(quote)
+
+    return result
+
+
+def get_favorite_quotes():
+    result = []
+
+    for quote in quotes:
+        if quote["favorite"]:
+            result.append(quote)
+
+    return result
+
+
+def add_to_favorites(quote_id: int):
+    for quote in quotes:
+        if quote["id"] == quote_id:
+            quote["favorite"] = True
+            return quote
+
+    raise HTTPException(
+        status_code=404,
+        detail="Quote not found"
+    )
+
+
+def remove_from_favorites(quote_id: int):
+    for quote in quotes:
+        if quote["id"] == quote_id:
+            quote["favorite"] = False
+            return quote
+
+    raise HTTPException(
+        status_code=404,
+        detail="Quote not found"
+    )
+
+
+def search_quotes(author: str = None, text: str = None):
+    result = []
+
+    for quote in quotes:
+        if author:
+            if author.lower() not in quote["author"].lower():
+                continue
+
+        if text:
+            if text.lower() not in quote["text"].lower():
+                continue
+
+        result.append(quote)
 
     return result

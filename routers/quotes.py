@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter
 
 from schemas.quote import Quote
@@ -6,9 +8,13 @@ from services.quote_service import (
     get_random_quote,
     get_quote_by_id,
     create_quote,
-    delete_quote,
     update_quote,
-    get_quotes_by_category
+    delete_quote,
+    get_quotes_by_category,
+    get_favorite_quotes,
+    add_to_favorites,
+    remove_from_favorites,
+    search_quotes
 )
 
 router = APIRouter()
@@ -31,14 +37,27 @@ async def random_quote():
     return get_random_quote()
 
 
-@router.get("/quotes/{quote_id}")
-async def get_quote(quote_id: int):
-    return get_quote_by_id(quote_id)
-
-
 @router.get("/quotes/category/{category}")
 async def quotes_by_category(category: str):
     return get_quotes_by_category(category)
+
+
+@router.get("/quotes/favorites")
+async def favorites():
+    return get_favorite_quotes()
+
+
+@router.get("/quotes/search")
+async def search(
+    author: Optional[str] = None,
+    text: Optional[str] = None
+):
+    return search_quotes(author, text)
+
+
+@router.get("/quotes/{quote_id}")
+async def get_quote(quote_id: int):
+    return get_quote_by_id(quote_id)
 
 
 @router.post("/quotes")
@@ -61,6 +80,16 @@ async def update_existing_quote(
         text=quote.text,
         category=quote.category
     )
+
+
+@router.put("/quotes/{quote_id}/favorite")
+async def favorite_quote(quote_id: int):
+    return add_to_favorites(quote_id)
+
+
+@router.put("/quotes/{quote_id}/unfavorite")
+async def unfavorite_quote(quote_id: int):
+    return remove_from_favorites(quote_id)
 
 
 @router.delete("/quotes/{quote_id}")

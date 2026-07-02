@@ -1,8 +1,10 @@
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
-from schemas.quote import Quote
+from database.database import get_db
+from schemas.quote import QuoteCreate, QuoteUpdate
 from services.quote_service import (
     get_all_quotes,
     get_random_quote,
@@ -17,81 +19,128 @@ from services.quote_service import (
     search_quotes
 )
 
-router = APIRouter()
+router = APIRouter(
+    tags=["Quotes"]
+)
 
 
 @router.get("/")
-async def home():
+def home():
     return {
-        "message": "Quotes API is running"
+        "message": "Quotes API is running!"
     }
 
 
 @router.get("/quotes")
-async def get_quotes():
-    return get_all_quotes()
+def read_quotes(
+    db: Session = Depends(get_db)
+):
+    return get_all_quotes(db)
 
 
 @router.get("/quotes/random")
-async def random_quote():
-    return get_random_quote()
-
-
-@router.get("/quotes/category/{category}")
-async def quotes_by_category(category: str):
-    return get_quotes_by_category(category)
-
-
-@router.get("/quotes/favorites")
-async def favorites():
-    return get_favorite_quotes()
-
-
-@router.get("/quotes/search")
-async def search(
-    author: Optional[str] = None,
-    text: Optional[str] = None
+def random_quote(
+    db: Session = Depends(get_db)
 ):
-    return search_quotes(author, text)
+    return get_random_quote(db)
 
 
 @router.get("/quotes/{quote_id}")
-async def get_quote(quote_id: int):
-    return get_quote_by_id(quote_id)
+def read_quote(
+    quote_id: int,
+    db: Session = Depends(get_db)
+):
+    return get_quote_by_id(
+        db,
+        quote_id
+    )
 
 
 @router.post("/quotes")
-async def create_new_quote(quote: Quote):
+def add_quote(
+    quote: QuoteCreate,
+    db: Session = Depends(get_db)
+):
     return create_quote(
-        author=quote.author,
-        text=quote.text,
-        category=quote.category
+        db,
+        quote
     )
 
 
 @router.put("/quotes/{quote_id}")
-async def update_existing_quote(
+def edit_quote(
     quote_id: int,
-    quote: Quote
+    quote: QuoteUpdate,
+    db: Session = Depends(get_db)
 ):
     return update_quote(
-        quote_id=quote_id,
-        author=quote.author,
-        text=quote.text,
-        category=quote.category
+        db,
+        quote_id,
+        quote
     )
 
 
+@router.delete("/quotes/{quote_id}")
+def remove_quote(
+    quote_id: int,
+    db: Session = Depends(get_db)
+):
+    return delete_quote(
+        db,
+        quote_id
+    )
+
+
+@router.get("/quotes/category/{category}")
+def category_quotes(
+    category: str,
+    db: Session = Depends(get_db)
+):
+    return get_quotes_by_category(
+        db,
+        category
+    )
+
+
+@router.get("/quotes/favorites")
+def favorites(
+    db: Session = Depends(get_db)
+):
+    return get_favorite_quotes(db)
+
+
 @router.put("/quotes/{quote_id}/favorite")
-async def favorite_quote(quote_id: int):
-    return add_to_favorites(quote_id)
+def favorite(
+    quote_id: int,
+    db: Session = Depends(get_db)
+):
+    return add_to_favorites(
+        db,
+        quote_id
+    )
 
 
 @router.put("/quotes/{quote_id}/unfavorite")
-async def unfavorite_quote(quote_id: int):
-    return remove_from_favorites(quote_id)
+def unfavorite(
+    quote_id: int,
+    db: Session = Depends(get_db)
+):
+    return remove_from_favorites(
+        db,
+        quote_id
+    )
 
 
-@router.delete("/quotes/{quote_id}")
-async def delete_existing_quote(quote_id: int):
-    return delete_quote(quote_id)
+@router.get("/quotes/search")
+def search(
+    author: Optional[str] = None,
+    text: Optional[str] = None,
+    category: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    return search_quotes(
+        db,
+        author,
+        text,
+        category
+    )

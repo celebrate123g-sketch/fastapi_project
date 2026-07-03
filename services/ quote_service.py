@@ -1,6 +1,6 @@
-from sqlalchemy import func
-from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from sqlalchemy import desc, func
+from sqlalchemy.orm import Session
 
 from database.models import QuoteModel
 from schemas.quote import QuoteCreate, QuoteUpdate
@@ -26,7 +26,10 @@ def get_random_quote(db: Session):
     return quote
 
 
-def get_quote_by_id(db: Session, quote_id: int):
+def get_quote_by_id(
+    db: Session,
+    quote_id: int
+):
     quote = (
         db.query(QuoteModel)
         .filter(QuoteModel.id == quote_id)
@@ -41,8 +44,27 @@ def get_quote_by_id(db: Session, quote_id: int):
 
     return quote
 
+def increment_views(
+    db: Session,
+    quote_id: int
+):
+    quote = get_quote_by_id(
+        db,
+        quote_id
+    )
 
-def create_quote(db: Session, quote: QuoteCreate):
+    quote.views += 1
+
+    db.commit()
+    db.refresh(quote)
+
+    return quote
+
+
+def create_quote(
+    db: Session,
+    quote: QuoteCreate
+):
     new_quote = QuoteModel(
         author=quote.author,
         text=quote.text,
@@ -61,7 +83,17 @@ def update_quote(
     quote_id: int,
     quote_data: QuoteUpdate
 ):
-    quote = get_quote_by_id(db, quote_id)
+    quote = (
+        db.query(QuoteModel)
+        .filter(QuoteModel.id == quote_id)
+        .first()
+    )
+
+    if quote is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Quote not found."
+        )
 
     quote.author = quote_data.author
     quote.text = quote_data.text
@@ -77,7 +109,17 @@ def delete_quote(
     db: Session,
     quote_id: int
 ):
-    quote = get_quote_by_id(db, quote_id)
+    quote = (
+        db.query(QuoteModel)
+        .filter(QuoteModel.id == quote_id)
+        .first()
+    )
+
+    if quote is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Quote not found."
+        )
 
     db.delete(quote)
     db.commit()
@@ -97,7 +139,10 @@ def get_quotes_by_category(
         .all()
     )
 
-def get_favorite_quotes(db: Session):
+
+def get_favorite_quotes(
+    db: Session
+):
     return (
         db.query(QuoteModel)
         .filter(QuoteModel.favorite == True)
@@ -109,7 +154,10 @@ def add_to_favorites(
     db: Session,
     quote_id: int
 ):
-    quote = get_quote_by_id(db, quote_id)
+    quote = get_quote_by_id(
+        db,
+        quote_id
+    )
 
     quote.favorite = True
 
@@ -123,7 +171,10 @@ def remove_from_favorites(
     db: Session,
     quote_id: int
 ):
-    quote = get_quote_by_id(db, quote_id)
+    quote = get_quote_by_id(
+        db,
+        quote_id
+    )
 
     quote.favorite = False
 
@@ -131,6 +182,61 @@ def remove_from_favorites(
     db.refresh(quote)
 
     return quote
+
+
+def like_quote(
+    db: Session,
+    quote_id: int
+):
+    quote = get_quote_by_id(
+        db,
+        quote_id
+    )
+
+    quote.likes += 1
+
+    db.commit()
+    db.refresh(quote)
+
+    return quote
+
+
+def unlike_quote(
+    db: Session,
+    quote_id: int
+):
+    quote = get_quote_by_id(
+        db,
+        quote_id
+    )
+
+    if quote.likes > 0:
+        quote.likes -= 1
+
+    db.commit()
+    db.refresh(quote)
+
+    return quote
+
+
+def get_popular_quotes(
+    db: Session
+):
+    return (
+        db.query(QuoteModel)
+        .order_by(desc(QuoteModel.likes))
+        .all()
+    )
+
+
+def get_most_viewed_quotes(
+    db: Session
+):
+    return (
+        db.query(QuoteModel)
+        .order_by(desc(QuoteModel.views))
+        .all()
+    )
 
 
 def search_quotes(

@@ -50,7 +50,7 @@ def read_quote(
     quote_id: int,
     db: Session = Depends(get_db)
 ):
-    return get_quote_by_id(
+    return increment_views(
         db,
         quote_id
     )

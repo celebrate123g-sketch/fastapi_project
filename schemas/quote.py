@@ -34,7 +34,13 @@ class QuoteUpdate(QuoteBase):
 
 class QuoteResponse(QuoteBase):
     id: int
+
     favorite: bool
+
+    likes: int
+    views: int
+    comments_count: int
+
     created_at: datetime
     updated_at: datetime
 

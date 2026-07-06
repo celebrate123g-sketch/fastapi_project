@@ -1,9 +1,10 @@
 from fastapi import HTTPException
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
-
+from sqlalchemy import desc, func
 from database.models import QuoteModel
 from schemas.quote import QuoteCreate, QuoteUpdate
+from services.log_service import create_log
 
 
 def get_all_quotes(db: Session):
@@ -57,6 +58,11 @@ def increment_views(
 
     db.commit()
     db.refresh(quote)
+    create_log(
+        db,
+        "Viewed quote",
+        quote.id
+    )
 
     return quote
 
@@ -74,6 +80,11 @@ def create_quote(
     db.add(new_quote)
     db.commit()
     db.refresh(new_quote)
+    create_log(
+        db,
+        "Created quote",
+        new_quote.id
+    )
 
     return new_quote
 
@@ -101,6 +112,11 @@ def update_quote(
 
     db.commit()
     db.refresh(quote)
+    create_log(
+        db,
+        "Updated quote",
+        quote.id
+    )
 
     return quote
 
@@ -122,6 +138,11 @@ def delete_quote(
         )
 
     db.delete(quote)
+    create_log(
+        db,
+        "Deleted quote",
+        quote.id
+    )
     db.commit()
 
     return {
@@ -163,6 +184,11 @@ def add_to_favorites(
 
     db.commit()
     db.refresh(quote)
+    create_log(
+        db,
+        "Added to favorites",
+        quote.id
+    )
 
     return quote
 
@@ -180,6 +206,11 @@ def remove_from_favorites(
 
     db.commit()
     db.refresh(quote)
+    create_log(
+        db,
+        "Removed from favorites",
+        quote.id
+    )
 
     return quote
 
@@ -197,6 +228,11 @@ def like_quote(
 
     db.commit()
     db.refresh(quote)
+    create_log(
+        db,
+        "Liked quote",
+        quote.id
+    )
 
     return quote
 
@@ -215,6 +251,11 @@ def unlike_quote(
 
     db.commit()
     db.refresh(quote)
+    create_log(
+        db,
+        "Removed like",
+        quote.id
+    )
 
     return quote
 
@@ -263,3 +304,83 @@ def search_quotes(
         )
 
     return query.all()
+
+def like_quote(
+    db: Session,
+    quote_id: int
+):
+    quote = get_quote_by_id(
+        db,
+        quote_id
+    )
+
+    quote.likes += 1
+
+    db.commit()
+    db.refresh(quote)
+    create_log(
+        db,
+        "Liked quote",
+        quote.id
+    )
+
+    return quote
+
+def unlike_quote(
+    db: Session,
+    quote_id: int
+):
+    quote = get_quote_by_id(
+        db,
+        quote_id
+    )
+
+    if quote.likes > 0:
+        quote.likes -= 1
+
+    db.commit()
+    db.refresh(quote)
+
+    return quote
+
+def get_popular_quotes(
+    db: Session
+):
+    return (
+        db.query(QuoteModel)
+        .order_by(
+            desc(QuoteModel.likes)
+        )
+        .all()
+    )
+
+def get_most_viewed_quotes(
+    db: Session
+):
+    return (
+        db.query(QuoteModel)
+        .order_by(
+            desc(QuoteModel.views)
+        )
+        .all()
+    )
+
+def get_trending_quotes(
+    db: Session
+):
+    quotes = (
+        db.query(QuoteModel)
+        .all()
+    )
+
+    quotes.sort(
+        key=lambda quote:
+        (
+            quote.likes * 3
+            + quote.views * 0.1
+            + quote.comments_count * 5
+        ),
+        reverse=True
+    )
+
+    return quotes

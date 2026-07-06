@@ -6,17 +6,23 @@ from sqlalchemy.orm import Session
 from database.database import get_db
 from schemas.quote import QuoteCreate, QuoteUpdate
 from services.quote_service import (
-    get_all_quotes,
-    get_random_quote,
-    get_quote_by_id,
-    create_quote,
-    update_quote,
-    delete_quote,
-    get_quotes_by_category,
-    get_favorite_quotes,
     add_to_favorites,
+    create_quote,
+    delete_quote,
+    get_all_quotes,
+    get_favorite_quotes,
+    get_most_viewed_quotes,
+    get_popular_quotes,
+    get_quote_by_id,
+    get_quotes_by_category,
+    get_random_quote,
+    get_trending_quotes,
+    increment_views,
+    like_quote,
     remove_from_favorites,
-    search_quotes
+    search_quotes,
+    unlike_quote,
+    update_quote,
 )
 
 router = APIRouter(
@@ -129,6 +135,49 @@ def unfavorite(
         db,
         quote_id
     )
+
+
+@router.put("/quotes/{quote_id}/like")
+def like(
+    quote_id: int,
+    db: Session = Depends(get_db)
+):
+    return like_quote(
+        db,
+        quote_id
+    )
+
+
+@router.put("/quotes/{quote_id}/unlike")
+def unlike(
+    quote_id: int,
+    db: Session = Depends(get_db)
+):
+    return unlike_quote(
+        db,
+        quote_id
+    )
+
+
+@router.get("/quotes/popular")
+def popular_quotes(
+    db: Session = Depends(get_db)
+):
+    return get_popular_quotes(db)
+
+
+@router.get("/quotes/most-viewed")
+def most_viewed_quotes(
+    db: Session = Depends(get_db)
+):
+    return get_most_viewed_quotes(db)
+
+
+@router.get("/quotes/trending")
+def trending_quotes(
+    db: Session = Depends(get_db)
+):
+    return get_trending_quotes(db)
 
 
 @router.get("/quotes/search")

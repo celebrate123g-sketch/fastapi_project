@@ -109,3 +109,27 @@ class CommentModel(Base):
     quote: Mapped["QuoteModel"] = relationship(
         back_populates="comments"
     )
+
+class LogModel(Base):
+    __tablename__ = "logs"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    action: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False
+    )
+
+    quote_id: Mapped[int | None] = mapped_column(
+        ForeignKey("quotes.id"),
+        nullable=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )

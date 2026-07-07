@@ -41,6 +41,8 @@ class QuoteResponse(QuoteBase):
     views: int
     comments_count: int
 
+    image_url: str | None = None
+
     created_at: datetime
     updated_at: datetime
 

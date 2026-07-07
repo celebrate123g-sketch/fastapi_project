@@ -8,7 +8,6 @@ from sqlalchemy import (
     String,
 )
 from sqlalchemy.orm import (
-    DeclarativeBase,
     Mapped,
     mapped_column,
     relationship,
@@ -61,6 +60,11 @@ class QuoteModel(Base):
         default=0
     )
 
+    image_url: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow
@@ -109,6 +113,7 @@ class CommentModel(Base):
     quote: Mapped["QuoteModel"] = relationship(
         back_populates="comments"
     )
+
 
 class LogModel(Base):
     __tablename__ = "logs"

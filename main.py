@@ -8,7 +8,7 @@ from routers.comments import router as comments_router
 from routers.logs import router as logs_router
 from routers.images import router as images_router
 from routers.export import router as export_router
-from routers.import import router as import_router
+from routers.imports import router as import_router
 
 app = FastAPI(
     title="Quotes API",

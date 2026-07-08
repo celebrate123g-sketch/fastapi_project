@@ -1,17 +1,62 @@
 from fastapi import HTTPException
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func
+
 from database.models import QuoteModel
 from schemas.quote import QuoteCreate, QuoteUpdate
 from services.log_service import create_log
 
 
-def get_all_quotes(db: Session):
-    return db.query(QuoteModel).all()
+def get_all_quotes(
+    db: Session,
+    skip: int = 0,
+    limit: int = 10,
+    sort: str = "newest"
+):
+    query = db.query(QuoteModel)
+
+    if sort == "newest":
+        query = query.order_by(
+            desc(QuoteModel.created_at)
+        )
+
+    elif sort == "oldest":
+        query = query.order_by(
+            QuoteModel.created_at
+        )
+
+    elif sort == "likes":
+        query = query.order_by(
+            desc(QuoteModel.likes)
+        )
+
+    elif sort == "views":
+        query = query.order_by(
+            desc(QuoteModel.views)
+        )
+
+    elif sort == "author":
+        query = query.order_by(
+            QuoteModel.author
+        )
+
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid sort type."
+        )
+
+    return (
+        query
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 
-def get_random_quote(db: Session):
+def get_random_quote(
+    db: Session
+):
     quote = (
         db.query(QuoteModel)
         .order_by(func.random())
@@ -33,7 +78,9 @@ def get_quote_by_id(
 ):
     quote = (
         db.query(QuoteModel)
-        .filter(QuoteModel.id == quote_id)
+        .filter(
+            QuoteModel.id == quote_id
+        )
         .first()
     )
 
@@ -44,6 +91,7 @@ def get_quote_by_id(
         )
 
     return quote
+
 
 def increment_views(
     db: Session,
@@ -58,6 +106,7 @@ def increment_views(
 
     db.commit()
     db.refresh(quote)
+
     create_log(
         db,
         "Viewed quote",
@@ -65,7 +114,6 @@ def increment_views(
     )
 
     return quote
-
 
 def create_quote(
     db: Session,
@@ -80,6 +128,7 @@ def create_quote(
     db.add(new_quote)
     db.commit()
     db.refresh(new_quote)
+
     create_log(
         db,
         "Created quote",
@@ -94,17 +143,10 @@ def update_quote(
     quote_id: int,
     quote_data: QuoteUpdate
 ):
-    quote = (
-        db.query(QuoteModel)
-        .filter(QuoteModel.id == quote_id)
-        .first()
+    quote = get_quote_by_id(
+        db,
+        quote_id
     )
-
-    if quote is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Quote not found."
-        )
 
     quote.author = quote_data.author
     quote.text = quote_data.text
@@ -112,6 +154,7 @@ def update_quote(
 
     db.commit()
     db.refresh(quote)
+
     create_log(
         db,
         "Updated quote",
@@ -125,25 +168,19 @@ def delete_quote(
     db: Session,
     quote_id: int
 ):
-    quote = (
-        db.query(QuoteModel)
-        .filter(QuoteModel.id == quote_id)
-        .first()
+    quote = get_quote_by_id(
+        db,
+        quote_id
     )
 
-    if quote is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Quote not found."
-        )
-
     db.delete(quote)
+    db.commit()
+
     create_log(
         db,
         "Deleted quote",
-        quote.id
+        quote_id
     )
-    db.commit()
 
     return {
         "message": "Quote deleted successfully."
@@ -156,7 +193,9 @@ def get_quotes_by_category(
 ):
     return (
         db.query(QuoteModel)
-        .filter(QuoteModel.category == category)
+        .filter(
+            QuoteModel.category == category
+        )
         .all()
     )
 
@@ -166,7 +205,9 @@ def get_favorite_quotes(
 ):
     return (
         db.query(QuoteModel)
-        .filter(QuoteModel.favorite == True)
+        .filter(
+            QuoteModel.favorite == True
+        )
         .all()
     )
 
@@ -184,6 +225,7 @@ def add_to_favorites(
 
     db.commit()
     db.refresh(quote)
+
     create_log(
         db,
         "Added to favorites",
@@ -206,6 +248,7 @@ def remove_from_favorites(
 
     db.commit()
     db.refresh(quote)
+
     create_log(
         db,
         "Removed from favorites",
@@ -213,7 +256,6 @@ def remove_from_favorites(
     )
 
     return quote
-
 
 def like_quote(
     db: Session,
@@ -228,6 +270,7 @@ def like_quote(
 
     db.commit()
     db.refresh(quote)
+
     create_log(
         db,
         "Liked quote",
@@ -251,6 +294,7 @@ def unlike_quote(
 
     db.commit()
     db.refresh(quote)
+
     create_log(
         db,
         "Removed like",
@@ -265,7 +309,9 @@ def get_popular_quotes(
 ):
     return (
         db.query(QuoteModel)
-        .order_by(desc(QuoteModel.likes))
+        .order_by(
+            desc(QuoteModel.likes)
+        )
         .all()
     )
 
@@ -275,7 +321,9 @@ def get_most_viewed_quotes(
 ):
     return (
         db.query(QuoteModel)
-        .order_by(desc(QuoteModel.views))
+        .order_by(
+            desc(QuoteModel.views)
+        )
         .all()
     )
 
@@ -305,65 +353,6 @@ def search_quotes(
 
     return query.all()
 
-def like_quote(
-    db: Session,
-    quote_id: int
-):
-    quote = get_quote_by_id(
-        db,
-        quote_id
-    )
-
-    quote.likes += 1
-
-    db.commit()
-    db.refresh(quote)
-    create_log(
-        db,
-        "Liked quote",
-        quote.id
-    )
-
-    return quote
-
-def unlike_quote(
-    db: Session,
-    quote_id: int
-):
-    quote = get_quote_by_id(
-        db,
-        quote_id
-    )
-
-    if quote.likes > 0:
-        quote.likes -= 1
-
-    db.commit()
-    db.refresh(quote)
-
-    return quote
-
-def get_popular_quotes(
-    db: Session
-):
-    return (
-        db.query(QuoteModel)
-        .order_by(
-            desc(QuoteModel.likes)
-        )
-        .all()
-    )
-
-def get_most_viewed_quotes(
-    db: Session
-):
-    return (
-        db.query(QuoteModel)
-        .order_by(
-            desc(QuoteModel.views)
-        )
-        .all()
-    )
 
 def get_trending_quotes(
     db: Session
@@ -374,8 +363,7 @@ def get_trending_quotes(
     )
 
     quotes.sort(
-        key=lambda quote:
-        (
+        key=lambda quote: (
             quote.likes * 3
             + quote.views * 0.1
             + quote.comments_count * 5

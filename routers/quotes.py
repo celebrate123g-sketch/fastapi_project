@@ -39,9 +39,17 @@ def home():
 
 @router.get("/quotes")
 def read_quotes(
+    skip: int = 0,
+    limit: int = 10,
+    sort: str = "newest",
     db: Session = Depends(get_db)
 ):
-    return get_all_quotes(db)
+    return get_all_quotes(
+        db=db,
+        skip=skip,
+        limit=limit,
+        sort=sort
+    )
 
 
 @router.get("/quotes/random")

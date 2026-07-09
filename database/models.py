@@ -6,7 +6,10 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Table,
+    Column,
 )
+
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
@@ -14,6 +17,24 @@ from sqlalchemy.orm import (
 )
 
 from database.database import Base
+
+
+quote_tags = Table(
+    "quote_tags",
+    Base.metadata,
+
+    Column(
+        "quote_id",
+        ForeignKey("quotes.id"),
+        primary_key=True
+    ),
+
+    Column(
+        "tag_id",
+        ForeignKey("tags.id"),
+        primary_key=True
+    )
+)
 
 
 class QuoteModel(Base):
@@ -79,6 +100,32 @@ class QuoteModel(Base):
     comments: Mapped[list["CommentModel"]] = relationship(
         back_populates="quote",
         cascade="all, delete-orphan"
+    )
+
+    tags: Mapped[list["TagModel"]] = relationship(
+        secondary=quote_tags,
+        back_populates="quotes"
+    )
+
+
+class TagModel(Base):
+    __tablename__ = "tags"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(50),
+        unique=True,
+        nullable=False
+    )
+
+    quotes: Mapped[list["QuoteModel"]] = relationship(
+        secondary=quote_tags,
+        back_populates="tags"
     )
 
 

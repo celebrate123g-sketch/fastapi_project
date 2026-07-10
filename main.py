@@ -9,6 +9,7 @@ from routers.logs import router as logs_router
 from routers.images import router as images_router
 from routers.export import router as export_router
 from routers.imports import router as import_router
+from routers import recommendations
 
 app = FastAPI(
     title="Quotes API",
@@ -33,3 +34,6 @@ app.include_router(logs_router)
 app.include_router(images_router)
 app.include_router(export_router)
 app.include_router(import_router)
+app.include_router(
+    recommendations.router
+)

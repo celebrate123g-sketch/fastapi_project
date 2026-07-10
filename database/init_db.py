@@ -1,6 +1,23 @@
-from database.database import Base, engine
-from database.models import QuoteModel
+from database.database import engine, Base
+
+from database.models import (
+    QuoteModel,
+    TagModel,
+    CommentModel,
+    LogModel,
+    UserModel,
+    UserPreferenceModel,
+    QuoteViewModel
+)
 
 
 def create_tables():
-    Base.metadata.create_all(bind=engine)
+
+    Base.metadata.create_all(
+        bind=engine
+    )
+
+
+if __name__ == "__main__":
+
+    create_tables()

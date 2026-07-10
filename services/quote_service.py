@@ -93,25 +93,32 @@ def get_quote_by_id(
     return quote
 
 
-def increment_views(
-    db: Session,
-    quote_id: int
-):
-    quote = get_quote_by_id(
-        db,
-        quote_id
+def increment_views(db, quote_id):
+
+    quote = (
+        db.query(QuoteModel)
+        .filter(
+            QuoteModel.id == quote_id
+        )
+        .first()
     )
 
+    if not quote:
+        return None
+
+
     quote.views += 1
+
+
+    view = QuoteViewModel(
+        quote_id=quote_id
+    )
+
+    db.add(view)
 
     db.commit()
     db.refresh(quote)
 
-    create_log(
-        db,
-        "Viewed quote",
-        quote.id
-    )
 
     return quote
 

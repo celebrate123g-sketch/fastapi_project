@@ -7,7 +7,8 @@ from database.models import (
     LogModel,
     UserModel,
     UserPreferenceModel,
-    QuoteViewModel
+    QuoteViewModel,
+    QuoteHistoryModel
 )
 
 

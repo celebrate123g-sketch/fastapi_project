@@ -10,6 +10,7 @@ from routers.images import router as images_router
 from routers.export import router as export_router
 from routers.imports import router as import_router
 from routers.authors import router as authors_router
+from routers.history import router as history_router
 from routers import recommendations
 
 app = FastAPI(
@@ -40,4 +41,7 @@ app.include_router(
 )
 app.include_router(
     authors_router
+)
+app.include_router(
+    history_router
 )

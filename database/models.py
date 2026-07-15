@@ -380,3 +380,53 @@ class QuoteViewModel(Base):
 
 
     quote: Mapped["QuoteModel"] = relationship()
+
+class QuoteHistoryModel(Base):
+
+    __tablename__ = "quote_history"
+
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+
+    quote_id: Mapped[int] = mapped_column(
+        ForeignKey("quotes.id"),
+        nullable=False
+    )
+
+
+    author: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False
+    )
+
+
+    text: Mapped[str] = mapped_column(
+        String(1000),
+        nullable=False
+    )
+
+
+    category: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False
+    )
+
+
+    image_url: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
+    )
+
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+
+    quote: Mapped["QuoteModel"] = relationship()

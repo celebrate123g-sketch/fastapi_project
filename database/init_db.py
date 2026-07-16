@@ -8,7 +8,8 @@ from database.models import (
     UserModel,
     UserPreferenceModel,
     QuoteViewModel,
-    QuoteHistoryModel
+    QuoteHistoryModel,
+    QuoteRatingModel
 )
 
 

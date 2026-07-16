@@ -9,13 +9,14 @@ from routers.logs import router as logs_router
 from routers.images import router as images_router
 from routers.export import router as export_router
 from routers.imports import router as import_router
-from routers.authors import router as authors_router
 from routers.history import router as history_router
+from routers.authors import router as authors_router
+from routers.ratings import router as ratings_router
 from routers import recommendations
 
 app = FastAPI(
     title="Quotes API",
-    version="3.0.0"
+    version="4.0.0"
 )
 
 
@@ -36,12 +37,7 @@ app.include_router(logs_router)
 app.include_router(images_router)
 app.include_router(export_router)
 app.include_router(import_router)
-app.include_router(
-    recommendations.router
-)
-app.include_router(
-    authors_router
-)
-app.include_router(
-    history_router
-)
+app.include_router(history_router)
+app.include_router(authors_router)
+app.include_router(ratings_router)
+app.include_router(recommendations.router)

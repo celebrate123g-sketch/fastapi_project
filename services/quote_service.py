@@ -16,10 +16,6 @@ from schemas.quote import (
 
 from services.log_service import create_log
 
-from services.history_service import (
-    save_quote_history
-)
-
 
 def get_all_quotes(
     db: Session,
@@ -27,49 +23,34 @@ def get_all_quotes(
     limit: int = 10,
     sort: str = "newest"
 ):
-
-    query = db.query(
-        QuoteModel
-    )
+    query = db.query(QuoteModel)
 
     if sort == "newest":
-
         query = query.order_by(
-            desc(
-                QuoteModel.created_at
-            )
+            desc(QuoteModel.created_at)
         )
 
     elif sort == "oldest":
-
         query = query.order_by(
             QuoteModel.created_at
         )
 
     elif sort == "likes":
-
         query = query.order_by(
-            desc(
-                QuoteModel.likes
-            )
+            desc(QuoteModel.likes)
         )
 
     elif sort == "views":
-
         query = query.order_by(
-            desc(
-                QuoteModel.views
-            )
+            desc(QuoteModel.views)
         )
 
     elif sort == "author":
-
         query = query.order_by(
             QuoteModel.author
         )
 
     else:
-
         raise HTTPException(
             status_code=400,
             detail="Invalid sort type."
@@ -86,23 +67,13 @@ def get_all_quotes(
 def get_random_quote(
     db: Session
 ):
-
     quote = (
-
-        db.query(
-            QuoteModel
-        )
-
-        .order_by(
-            func.random()
-        )
-
+        db.query(QuoteModel)
+        .order_by(func.random())
         .first()
-
     )
 
     if quote is None:
-
         raise HTTPException(
             status_code=404,
             detail="No quotes found."
@@ -115,23 +86,15 @@ def get_quote_by_id(
     db: Session,
     quote_id: int
 ):
-
     quote = (
-
-        db.query(
-            QuoteModel
-        )
-
+        db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id
         )
-
         .first()
-
     )
 
     if quote is None:
-
         raise HTTPException(
             status_code=404,
             detail="Quote not found."
@@ -141,26 +104,25 @@ def get_quote_by_id(
 
 
 def increment_views(
-    db: Session,
-    quote_id: int
+    db,
+    quote_id
 ):
-
     quote = (
-
-        db.query(
-            QuoteModel
-        )
-
+        db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id
         )
-
         .first()
-
     )
 
-    if quote is None:
+    if not quote:
         return None
+
+    quote.views += 1
+
+    view = QuoteViewModel(
+        quote_id=quote_id
+    )
 
     quote.views += 1
 
@@ -213,6 +175,7 @@ def create_quote(
     )
 
     return new_quote
+
 
 def update_quote(
     db: Session,
@@ -267,6 +230,18 @@ def delete_quote(
     db.delete(
         quote
     )
+
+    db.commit()
+
+    create_log(
+        db,
+        "Deleted quote",
+        quote_id
+    )
+
+    return {
+        "message": "Quote deleted successfully."
+    }
 
     db.commit()
 
@@ -429,6 +404,7 @@ def unlike_quote(
 
     return quote
 
+
 def get_popular_quotes(
     db: Session
 ):
@@ -448,7 +424,6 @@ def get_popular_quotes(
         .all()
 
     )
-
 
 def get_most_viewed_quotes(
     db: Session

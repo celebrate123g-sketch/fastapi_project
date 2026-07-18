@@ -118,7 +118,10 @@ def add_tag_to_quote(
     db.commit()
     db.refresh(quote)
 
-    return quote
+    return attach_rating(
+    db,
+    quote
+)
 
 
 def remove_tag_from_quote(
@@ -156,7 +159,10 @@ def remove_tag_from_quote(
     db.commit()
     db.refresh(quote)
 
-    return quote
+    return attach_rating(
+    db,
+    quote
+)
 
 
 def get_quote_tags(
@@ -177,4 +183,7 @@ def get_quote_tags(
             detail="Quote not found."
         )
 
-    return quote.tags
+    return attach_rating(
+    db,
+    quote
+).tags

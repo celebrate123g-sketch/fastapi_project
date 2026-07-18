@@ -16,7 +16,9 @@ def rate_quote(
 
     quote = (
         db.query(QuoteModel)
-        .filter(QuoteModel.id == quote_id)
+        .filter(
+            QuoteModel.id == quote_id
+        )
         .first()
     )
 
@@ -36,25 +38,22 @@ def rate_quote(
 
         existing.rating = rating
 
-        db.commit()
+    else:
 
-        db.refresh(existing)
+        new_rating = QuoteRatingModel(
+            user_id=user_id,
+            quote_id=quote_id,
+            rating=rating
+        )
 
-        return existing
-
-    new_rating = QuoteRatingModel(
-        user_id=user_id,
-        quote_id=quote_id,
-        rating=rating
-    )
-
-    db.add(new_rating)
+        db.add(new_rating)
 
     db.commit()
 
-    db.refresh(new_rating)
-
-    return new_rating
+    return get_quote_rating(
+        db,
+        quote_id
+    )
 
 
 def get_quote_rating(
@@ -128,3 +127,75 @@ def get_top_rated_quotes(
         }
         for quote, avg_rating, votes in result
     ]
+
+def get_top_rated_quotes(
+    db: Session,
+    limit: int = 10,
+    min_votes: int = 5
+):
+
+    quotes = (
+        db.query(
+            QuoteModel
+        )
+        .all()
+    )
+
+    result = []
+
+    for quote in quotes:
+
+        average = (
+            db.query(
+                func.avg(
+                    QuoteRatingModel.rating
+                )
+            )
+            .filter(
+                QuoteRatingModel.quote_id == quote.id
+            )
+            .scalar()
+        )
+
+        count = (
+            db.query(
+                func.count(
+                    QuoteRatingModel.id
+                )
+            )
+            .filter(
+                QuoteRatingModel.quote_id == quote.id
+            )
+            .scalar()
+
+        )
+
+        if count < min_votes:
+            continue
+
+        quote.average_rating = round(
+            average,
+            2
+        )
+
+        quote.ratings_count = count
+
+        result.append(
+            quote
+        )
+
+    result.sort(
+
+        key=lambda quote: (
+
+            quote.average_rating,
+
+            quote.ratings_count
+
+        ),
+
+        reverse=True
+
+    )
+
+    return result[:limit]

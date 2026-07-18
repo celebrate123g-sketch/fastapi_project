@@ -92,7 +92,10 @@ def register_view(
     db.commit()
 
 
-    return quote
+    return attach_rating(
+    db,
+    quote
+)
 
 
 
@@ -148,7 +151,10 @@ def register_like(
     db.commit()
 
 
-    return quote
+    return attach_rating(
+    db,
+    quote
+)
 
 
 
@@ -202,7 +208,10 @@ def register_favorite(
     db.commit()
 
 
-    return quote
+    return attach_rating(
+    db,
+    quote
+)
 
 
 

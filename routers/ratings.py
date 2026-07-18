@@ -1,5 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from services.rating_service import (
+    rate_quote,
+    get_quote_rating,
+    get_top_rated_quotes
+)
 
 from database.database import get_db
 
@@ -66,10 +71,12 @@ def rating(
 @router.get("/top")
 def top_rated(
     limit: int = 10,
+    min_votes: int = 5,
     db: Session = Depends(get_db)
 ):
 
     return get_top_rated_quotes(
         db,
-        limit
+        limit,
+        min_votes
     )

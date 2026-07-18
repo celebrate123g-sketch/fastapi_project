@@ -4,9 +4,12 @@ from sqlalchemy import desc, func
 
 from sqlalchemy.orm import Session
 
+from sqlalchemy import func
+
 from database.models import (
     QuoteModel,
-    QuoteViewModel
+    QuoteViewModel,
+    QuoteRatingModel
 )
 
 from schemas.quote import (
@@ -45,6 +48,46 @@ def get_all_quotes(
             desc(QuoteModel.views)
         )
 
+    elif sort == "rating":
+
+        quotes = query.all()
+
+        quotes = sorted(
+
+            quotes,
+
+            key=lambda quote: (
+
+                    db.query(
+                        func.avg(
+                            QuoteRatingModel.rating
+                        )
+                    )
+                    .filter(
+                        QuoteRatingModel.quote_id == quote.id
+                    )
+                    .scalar()
+
+                    or 0
+
+            ),
+
+            reverse=True
+
+        )
+
+        quotes = quotes[
+                 skip:skip + limit
+                 ]
+
+        return [
+            attach_rating(
+                db,
+                quote
+            )
+            for quote in quotes
+        ]
+
     elif sort == "author":
         query = query.order_by(
             QuoteModel.author
@@ -79,7 +122,10 @@ def get_random_quote(
             detail="No quotes found."
         )
 
-    return quote
+    return attach_rating(
+    db,
+    quote
+)
 
 
 def get_quote_by_id(
@@ -100,7 +146,10 @@ def get_quote_by_id(
             detail="Quote not found."
         )
 
-    return quote
+    return attach_rating(
+    db,
+    quote
+)
 
 
 def increment_views(
@@ -140,7 +189,10 @@ def increment_views(
         quote
     )
 
-    return quote
+    return attach_rating(
+    db,
+    quote
+)
 
 
 def create_quote(
@@ -209,7 +261,10 @@ def update_quote(
         quote.id
     )
 
-    return quote
+    return attach_rating(
+    db,
+    quote
+)
 
 
 def delete_quote(
@@ -319,7 +374,10 @@ def add_to_favorites(
         quote.id
     )
 
-    return quote
+    return attach_rating(
+    db,
+    quote
+)
 
 
 def remove_from_favorites(
@@ -346,7 +404,10 @@ def remove_from_favorites(
         quote.id
     )
 
-    return quote
+    return attach_rating(
+    db,
+    quote
+)
 
 
 def like_quote(
@@ -373,7 +434,10 @@ def like_quote(
         quote.id
     )
 
-    return quote
+    return attach_rating(
+    db,
+    quote
+)
 
 
 def unlike_quote(
@@ -402,7 +466,10 @@ def unlike_quote(
         quote.id
     )
 
-    return quote
+    return attach_rating(
+    db,
+    quote
+)
 
 
 def get_popular_quotes(
@@ -452,34 +519,29 @@ def search_quotes(
     text: str | None = None,
     category: str | None = None
 ):
-
-    query = db.query(
-        QuoteModel
-    )
+    query = db.query(QuoteModel)
 
     if author:
-
         query = query.filter(
-            QuoteModel.author.ilike(
-                f"%{author}%"
-            )
+            QuoteModel.author.ilike(f"%{author}%")
         )
 
     if text:
-
         query = query.filter(
-            QuoteModel.text.ilike(
-                f"%{text}%"
-            )
+            QuoteModel.text.ilike(f"%{text}%")
         )
 
     if category:
-
         query = query.filter(
             QuoteModel.category == category
         )
 
-    return query.all()
+    quotes = query.all()
+
+    return [
+        attach_rating(db, quote)
+        for quote in quotes
+    ]
 
 
 def get_trending_quotes(
@@ -512,4 +574,48 @@ def get_trending_quotes(
 
     )
 
-    return quotes
+    return attach_rating(
+    db,
+    quote
+)
+
+def attach_rating(
+    db: Session,
+    quote: QuoteModel
+):
+
+    average = (
+        db.query(
+            func.avg(
+                QuoteRatingModel.rating
+            )
+        )
+        .filter(
+            QuoteRatingModel.quote_id == quote.id
+        )
+        .scalar()
+    )
+
+    count = (
+        db.query(
+            func.count(
+                QuoteRatingModel.id
+            )
+        )
+        .filter(
+            QuoteRatingModel.quote_id == quote.id
+        )
+        .scalar()
+    )
+
+    quote.average_rating = round(
+        average or 0,
+        2
+    )
+
+    quote.ratings_count = count or 0
+
+    return attach_rating(
+    db,
+    quote
+)

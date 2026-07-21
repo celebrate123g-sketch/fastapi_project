@@ -19,6 +19,7 @@ from schemas.quote import (
 
 from services.log_service import create_log
 
+from services.history_service import save_quote_history
 
 def get_all_quotes(
     db: Session,
@@ -186,6 +187,11 @@ def increment_views(
     db.commit()
 
     db.refresh(
+        quote
+    )
+
+    save_quote_history(
+        db,
         quote
     )
 

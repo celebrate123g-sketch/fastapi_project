@@ -12,6 +12,7 @@ from routers.imports import router as import_router
 from routers.history import router as history_router
 from routers.authors import router as authors_router
 from routers.ratings import router as ratings_router
+from routers.daily_quote import router as daily_quote_router
 from routers import recommendations
 
 app = FastAPI(
@@ -41,3 +42,4 @@ app.include_router(history_router)
 app.include_router(authors_router)
 app.include_router(ratings_router)
 app.include_router(recommendations.router)
+app.include_router(daily_quote_router)

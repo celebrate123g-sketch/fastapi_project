@@ -174,6 +174,12 @@ class QuoteModel(Base):
         back_populates="favorite_quotes"
     )
 
+    reports = relationship(
+        "ReportModel",
+        back_populates="quote",
+        cascade="all, delete-orphan"
+    )
+
 
 
 class TagModel(Base):
@@ -430,3 +436,50 @@ class QuoteHistoryModel(Base):
 
 
     quote: Mapped["QuoteModel"] = relationship()
+
+class ReportModel(Base):
+
+    __tablename__ = "reports"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    quote_id = Column(
+        Integer,
+        ForeignKey("quotes.id"),
+        nullable=False
+    )
+
+    user_id = Column(
+        Integer,
+        nullable=False
+    )
+
+    reason = Column(
+        String,
+        nullable=False
+    )
+
+    description = Column(
+        String,
+        nullable=True
+    )
+
+    status = Column(
+        String,
+        default="Pending",
+        nullable=False
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    quote = relationship(
+        "QuoteModel",
+        back_populates="reports"
+    )

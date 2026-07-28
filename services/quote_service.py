@@ -1,10 +1,9 @@
+from datetime import datetime
+
 from fastapi import HTTPException
 
 from sqlalchemy import desc, func
-
 from sqlalchemy.orm import Session
-
-from sqlalchemy import func
 
 from database.models import (
     QuoteModel,
@@ -18,8 +17,8 @@ from schemas.quote import (
 )
 
 from services.log_service import create_log
-
 from services.history_service import save_quote_history
+
 
 def get_all_quotes(
     db: Session,
@@ -27,24 +26,34 @@ def get_all_quotes(
     limit: int = 10,
     sort: str = "newest"
 ):
-    query = db.query(QuoteModel)
+
+    query = (
+        db.query(QuoteModel)
+        .filter(
+            QuoteModel.is_deleted == False
+        )
+    )
 
     if sort == "newest":
+
         query = query.order_by(
             desc(QuoteModel.created_at)
         )
 
     elif sort == "oldest":
+
         query = query.order_by(
             QuoteModel.created_at
         )
 
     elif sort == "likes":
+
         query = query.order_by(
             desc(QuoteModel.likes)
         )
 
     elif sort == "views":
+
         query = query.order_by(
             desc(QuoteModel.views)
         )
@@ -59,17 +68,17 @@ def get_all_quotes(
 
             key=lambda quote: (
 
-                    db.query(
-                        func.avg(
-                            QuoteRatingModel.rating
-                        )
+                db.query(
+                    func.avg(
+                        QuoteRatingModel.rating
                     )
-                    .filter(
-                        QuoteRatingModel.quote_id == quote.id
-                    )
-                    .scalar()
+                )
+                .filter(
+                    QuoteRatingModel.quote_id == quote.id
+                )
+                .scalar()
 
-                    or 0
+                or 0
 
             ),
 
@@ -78,8 +87,8 @@ def get_all_quotes(
         )
 
         quotes = quotes[
-                 skip:skip + limit
-                 ]
+            skip:skip + limit
+        ]
 
         return [
             attach_rating(
@@ -90,82 +99,103 @@ def get_all_quotes(
         ]
 
     elif sort == "author":
+
         query = query.order_by(
             QuoteModel.author
         )
 
     else:
+
         raise HTTPException(
             status_code=400,
             detail="Invalid sort type."
         )
 
-    return (
+    quotes = (
         query
         .offset(skip)
         .limit(limit)
         .all()
     )
 
+    return [
+        attach_rating(
+            db,
+            quote
+        )
+        for quote in quotes
+    ]
+
 
 def get_random_quote(
     db: Session
 ):
+
     quote = (
         db.query(QuoteModel)
-        .order_by(func.random())
+        .filter(
+            QuoteModel.is_deleted == False
+        )
+        .order_by(
+            func.random()
+        )
         .first()
     )
 
     if quote is None:
+
         raise HTTPException(
             status_code=404,
             detail="No quotes found."
         )
 
     return attach_rating(
-    db,
-    quote
-)
+        db,
+        quote
+    )
 
 
 def get_quote_by_id(
     db: Session,
     quote_id: int
 ):
+
     quote = (
         db.query(QuoteModel)
         .filter(
-            QuoteModel.id == quote_id
+            QuoteModel.id == quote_id,
+            QuoteModel.is_deleted == False
         )
         .first()
     )
 
     if quote is None:
+
         raise HTTPException(
             status_code=404,
             detail="Quote not found."
         )
 
     return attach_rating(
-    db,
-    quote
-)
-
+        db,
+        quote
+    )
 
 def increment_views(
-    db,
-    quote_id
+    db: Session,
+    quote_id: int
 ):
+
     quote = (
         db.query(QuoteModel)
         .filter(
-            QuoteModel.id == quote_id
+            QuoteModel.id == quote_id,
+            QuoteModel.is_deleted == False
         )
         .first()
     )
 
-    if not quote:
+    if quote is None:
         return None
 
     quote.views += 1
@@ -174,15 +204,7 @@ def increment_views(
         quote_id=quote_id
     )
 
-    quote.views += 1
-
-    view = QuoteViewModel(
-        quote_id=quote_id
-    )
-
-    db.add(
-        view
-    )
+    db.add(view)
 
     db.commit()
 
@@ -196,9 +218,9 @@ def increment_views(
     )
 
     return attach_rating(
-    db,
-    quote
-)
+        db,
+        quote
+    )
 
 
 def create_quote(
@@ -212,7 +234,11 @@ def create_quote(
 
         text=quote.text,
 
-        category=quote.category
+        category=quote.category,
+
+        is_deleted=False,
+
+        deleted_at=None
 
     )
 
@@ -232,7 +258,10 @@ def create_quote(
         new_quote.id
     )
 
-    return new_quote
+    return attach_rating(
+        db,
+        new_quote
+    )
 
 
 def update_quote(
@@ -268,9 +297,9 @@ def update_quote(
     )
 
     return attach_rating(
-    db,
-    quote
-)
+        db,
+        quote
+    )
 
 
 def delete_quote(
@@ -288,72 +317,68 @@ def delete_quote(
         quote
     )
 
-    db.delete(
+    quote.is_deleted = True
+    quote.deleted_at = datetime.utcnow()
+
+    db.commit()
+
+    db.refresh(
         quote
     )
 
-    db.commit()
-
     create_log(
         db,
-        "Deleted quote",
-        quote_id
+        "Moved quote to trash",
+        quote.id
     )
 
     return {
-        "message": "Quote deleted successfully."
+        "message": "Quote moved to trash."
     }
-
-    db.commit()
-
-    create_log(
-        db,
-        "Deleted quote",
-        quote_id
-    )
-
-    return {
-        "message": "Quote deleted successfully."
-    }
-
 
 def get_quotes_by_category(
     db: Session,
     category: str
 ):
 
-    return (
-
-        db.query(
-            QuoteModel
-        )
-
+    quotes = (
+        db.query(QuoteModel)
         .filter(
-            QuoteModel.category == category
+            QuoteModel.category == category,
+            QuoteModel.is_deleted == False
         )
-
         .all()
-
     )
+
+    return [
+        attach_rating(
+            db,
+            quote
+        )
+        for quote in quotes
+    ]
 
 
 def get_favorite_quotes(
     db: Session
 ):
 
-    return (
-
-        db.query(
-            QuoteModel
-        )
-
+    quotes = (
+        db.query(QuoteModel)
         .filter(
-            QuoteModel.favorite == True
+            QuoteModel.favorite == True,
+            QuoteModel.is_deleted == False
         )
-
         .all()
-
     )
+
+    return [
+        attach_rating(
+            db,
+            quote
+        )
+        for quote in quotes
+    ]
 
 
 def add_to_favorites(
@@ -381,9 +406,9 @@ def add_to_favorites(
     )
 
     return attach_rating(
-    db,
-    quote
-)
+        db,
+        quote
+    )
 
 
 def remove_from_favorites(
@@ -411,9 +436,9 @@ def remove_from_favorites(
     )
 
     return attach_rating(
-    db,
-    quote
-)
+        db,
+        quote
+    )
 
 
 def like_quote(
@@ -441,9 +466,9 @@ def like_quote(
     )
 
     return attach_rating(
-    db,
-    quote
-)
+        db,
+        quote
+    )
 
 
 def unlike_quote(
@@ -457,7 +482,6 @@ def unlike_quote(
     )
 
     if quote.likes > 0:
-
         quote.likes -= 1
 
     db.commit()
@@ -473,50 +497,64 @@ def unlike_quote(
     )
 
     return attach_rating(
-    db,
-    quote
-)
-
+        db,
+        quote
+    )
 
 def get_popular_quotes(
     db: Session
 ):
 
-    return (
-
+    quotes = (
         db.query(
             QuoteModel
         )
-
+        .filter(
+            QuoteModel.is_deleted == False
+        )
         .order_by(
             desc(
                 QuoteModel.likes
             )
         )
-
         .all()
-
     )
+
+    return [
+        attach_rating(
+            db,
+            quote
+        )
+        for quote in quotes
+    ]
+
 
 def get_most_viewed_quotes(
     db: Session
 ):
 
-    return (
-
+    quotes = (
         db.query(
             QuoteModel
         )
-
+        .filter(
+            QuoteModel.is_deleted == False
+        )
         .order_by(
             desc(
                 QuoteModel.views
             )
         )
-
         .all()
-
     )
+
+    return [
+        attach_rating(
+            db,
+            quote
+        )
+        for quote in quotes
+    ]
 
 
 def search_quotes(
@@ -525,19 +563,34 @@ def search_quotes(
     text: str | None = None,
     category: str | None = None
 ):
-    query = db.query(QuoteModel)
+
+    query = (
+        db.query(
+            QuoteModel
+        )
+        .filter(
+            QuoteModel.is_deleted == False
+        )
+    )
 
     if author:
+
         query = query.filter(
-            QuoteModel.author.ilike(f"%{author}%")
+            QuoteModel.author.ilike(
+                f"%{author}%"
+            )
         )
 
     if text:
+
         query = query.filter(
-            QuoteModel.text.ilike(f"%{text}%")
+            QuoteModel.text.ilike(
+                f"%{text}%"
+            )
         )
 
     if category:
+
         query = query.filter(
             QuoteModel.category == category
         )
@@ -545,7 +598,10 @@ def search_quotes(
     quotes = query.all()
 
     return [
-        attach_rating(db, quote)
+        attach_rating(
+            db,
+            quote
+        )
         for quote in quotes
     ]
 
@@ -555,13 +611,13 @@ def get_trending_quotes(
 ):
 
     quotes = (
-
         db.query(
             QuoteModel
         )
-
+        .filter(
+            QuoteModel.is_deleted == False
+        )
         .all()
-
     )
 
     quotes.sort(
@@ -580,10 +636,14 @@ def get_trending_quotes(
 
     )
 
-    return attach_rating(
-    db,
-    quote
-)
+    return [
+        attach_rating(
+            db,
+            quote
+        )
+        for quote in quotes
+    ]
+
 
 def attach_rating(
     db: Session,
@@ -615,13 +675,10 @@ def attach_rating(
     )
 
     quote.average_rating = round(
-        average or 0,
+        float(average or 0),
         2
     )
 
     quote.ratings_count = count or 0
 
-    return attach_rating(
-    db,
-    quote
-)
+    return quote

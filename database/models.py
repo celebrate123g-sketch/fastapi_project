@@ -18,7 +18,6 @@ from sqlalchemy.orm import (
 
 from database.database import Base
 
-
 quote_tags = Table(
     "quote_tags",
     Base.metadata,
@@ -118,6 +117,17 @@ class QuoteModel(Base):
     views: Mapped[int] = mapped_column(
         Integer,
         default=0
+    )
+
+    is_deleted = Column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
+
+    deleted_at = Column(
+        DateTime,
+        nullable=True
     )
 
 

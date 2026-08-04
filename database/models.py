@@ -190,6 +190,14 @@ class QuoteModel(Base):
         cascade="all, delete-orphan"
     )
 
+    ratings: Mapped[list["QuoteRatingModel"]] = relationship(
+        back_populates="quote",
+        cascade="all, delete-orphan"
+    )
+
+    history: Mapped[list["QuoteHistoryModel"]] = relationship(
+        cascade="all, delete-orphan"
+    )
 
 
 class TagModel(Base):
@@ -492,4 +500,38 @@ class ReportModel(Base):
     quote = relationship(
         "QuoteModel",
         back_populates="reports"
+    )
+
+class QuoteRatingModel(Base):
+
+    __tablename__ = "quote_ratings"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    quote_id: Mapped[int] = mapped_column(
+        ForeignKey("quotes.id"),
+        nullable=False
+    )
+
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True
+    )
+
+    rating: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    quote: Mapped["QuoteModel"] = relationship(
+        back_populates="ratings"
     )

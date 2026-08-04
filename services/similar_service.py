@@ -1,27 +1,10 @@
-from difflib import SequenceMatcher
-
 from fastapi import HTTPException
 
 from sqlalchemy.orm import Session
 
 from database.models import QuoteModel
 
-from services.quote_service import attach_rating
-
-
-def calculate_similarity(
-    text1: str,
-    text2: str
-) -> float:
-
-    return round(
-        SequenceMatcher(
-            None,
-            text1.lower(),
-            text2.lower()
-        ).ratio() * 100,
-        2
-    )
+from services.duplicate_service import calculate_similarity
 
 
 def get_similar_quotes(
@@ -78,24 +61,19 @@ def get_similar_quotes(
 
         if similarity >= min_similarity:
 
-            rated_quote = attach_rating(
-                db,
-                quote
-            )
-
             result.append(
-
                 {
-                    "id": rated_quote.id,
-                    "author": rated_quote.author,
-                    "text": rated_quote.text,
-                    "category": rated_quote.category,
+                    "id": quote.id,
+                    "author": quote.author,
+                    "text": quote.text,
+                    "category": quote.category,
+                    "likes": quote.likes,
+                    "views": quote.views,
                     "similarity": round(
                         similarity,
                         2
                     )
                 }
-
             )
 
     result.sort(

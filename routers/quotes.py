@@ -23,6 +23,11 @@ from services.quote_service import (
     search_quotes,
     unlike_quote,
     update_quote,
+    get_deleted_quotes,
+    restore_quote,
+    force_delete_quote,
+    clear_trash,
+    restore_all_quotes,
 )
 
 router = APIRouter(
@@ -200,4 +205,52 @@ def search(
         author,
         text,
         category
+    )
+
+@router.get("/trash")
+def trash(
+    db: Session = Depends(get_db)
+):
+    return get_deleted_quotes(
+        db
+    )
+
+
+@router.put("/trash/{quote_id}/restore")
+def restore(
+    quote_id: int,
+    db: Session = Depends(get_db)
+):
+    return restore_quote(
+        db,
+        quote_id
+    )
+
+
+@router.delete("/trash/{quote_id}/force")
+def force_delete(
+    quote_id: int,
+    db: Session = Depends(get_db)
+):
+    return force_delete_quote(
+        db,
+        quote_id
+    )
+
+
+@router.delete("/trash")
+def empty_trash(
+    db: Session = Depends(get_db)
+):
+    return clear_trash(
+        db
+    )
+
+
+@router.put("/trash/restore-all")
+def restore_all(
+    db: Session = Depends(get_db)
+):
+    return restore_all_quotes(
+        db
     )

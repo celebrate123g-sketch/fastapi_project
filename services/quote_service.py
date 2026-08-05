@@ -931,3 +931,242 @@ def get_trending_quotes(
         for quote in quotes
 
     ]
+
+def get_deleted_quotes(
+    db: Session
+):
+
+    quotes = (
+
+        db.query(
+            QuoteModel
+        )
+
+        .filter(
+            QuoteModel.is_deleted == True
+        )
+
+        .order_by(
+            desc(
+                QuoteModel.deleted_at
+            )
+        )
+
+        .all()
+
+    )
+
+    return [
+
+        attach_rating(
+            db,
+            quote
+        )
+
+        for quote in quotes
+
+    ]
+
+
+def restore_quote(
+    db: Session,
+    quote_id: int
+):
+
+    quote = (
+
+        db.query(
+            QuoteModel
+        )
+
+        .filter(
+
+            QuoteModel.id == quote_id,
+
+            QuoteModel.is_deleted == True
+
+        )
+
+        .first()
+
+    )
+
+    if quote is None:
+
+        raise HTTPException(
+
+            status_code=404,
+
+            detail="Quote not found in trash."
+
+        )
+
+    quote.is_deleted = False
+    quote.deleted_at = None
+
+    db.commit()
+
+    db.refresh(
+        quote
+    )
+
+    create_log(
+
+        db,
+
+        "Restored quote",
+
+        quote.id
+
+    )
+
+    return {
+
+        "message": "Quote restored successfully."
+
+    }
+
+
+def force_delete_quote(
+    db: Session,
+    quote_id: int
+):
+
+    quote = (
+
+        db.query(
+            QuoteModel
+        )
+
+        .filter(
+
+            QuoteModel.id == quote_id,
+
+            QuoteModel.is_deleted == True
+
+        )
+
+        .first()
+
+    )
+
+    if quote is None:
+
+        raise HTTPException(
+
+            status_code=404,
+
+            detail="Quote not found in trash."
+
+        )
+
+    db.delete(
+        quote
+    )
+
+    db.commit()
+
+    create_log(
+
+        db,
+
+        "Permanently deleted quote",
+
+        quote_id
+
+    )
+
+    return {
+
+        "message": "Quote permanently deleted."
+
+    }
+
+
+def clear_trash(
+    db: Session
+):
+
+    quotes = (
+
+        db.query(
+            QuoteModel
+        )
+
+        .filter(
+            QuoteModel.is_deleted == True
+        )
+
+        .all()
+
+    )
+
+    count = len(quotes)
+
+    for quote in quotes:
+
+        db.delete(
+            quote
+        )
+
+    db.commit()
+
+    create_log(
+
+        db,
+
+        "Cleared trash",
+
+        None
+
+    )
+
+    return {
+
+        "message": f"{count} quotes permanently deleted."
+
+    }
+
+
+def restore_all_quotes(
+    db: Session
+):
+
+    quotes = (
+
+        db.query(
+            QuoteModel
+        )
+
+        .filter(
+            QuoteModel.is_deleted == True
+        )
+
+        .all()
+
+    )
+
+    count = len(quotes)
+
+    for quote in quotes:
+
+        quote.is_deleted = False
+        quote.deleted_at = None
+
+    db.commit()
+
+    create_log(
+
+        db,
+
+        "Restored all quotes",
+
+        None
+
+    )
+
+    return {
+
+        "message": f"{count} quotes restored."
+
+    }

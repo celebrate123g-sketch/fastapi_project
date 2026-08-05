@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from database.models import QuoteModel
 
+from datetime import timedelta
 
 def get_trash(
     db: Session
@@ -119,4 +120,43 @@ def empty_trash(
 
     return {
         "message": "Trash emptied successfully."
+    }
+
+AUTO_DELETE_DAYS = 30
+
+
+def auto_delete_old_quotes(
+    db: Session,
+    days: int = AUTO_DELETE_DAYS
+):
+
+    border = datetime.utcnow() - timedelta(
+        days=days
+    )
+
+    quotes = (
+        db.query(QuoteModel)
+        .filter(
+            QuoteModel.is_deleted == True,
+            QuoteModel.deleted_at != None,
+            QuoteModel.deleted_at <= border
+        )
+        .all()
+    )
+
+    deleted = 0
+
+    for quote in quotes:
+
+        db.delete(
+            quote
+        )
+
+        deleted += 1
+
+    db.commit()
+
+    return {
+        "deleted": deleted,
+        "days": days
     }

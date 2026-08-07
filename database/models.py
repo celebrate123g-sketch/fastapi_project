@@ -199,6 +199,52 @@ class QuoteModel(Base):
         cascade="all, delete-orphan"
     )
 
+class NotificationModel(Base):
+
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
+
+    title: Mapped[str] = mapped_column(
+        String(200),
+        nullable=False
+    )
+
+    message: Mapped[str] = mapped_column(
+        String(1000),
+        nullable=False
+    )
+
+    notification_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False
+    )
+
+    is_read: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    user: Mapped["UserModel"] = relationship(
+        back_populates="notifications"
+    )
+
 
 class TagModel(Base):
 
@@ -336,6 +382,11 @@ class UserModel(Base):
 
 
     preferences: Mapped[list["UserPreferenceModel"]] = relationship(
+        cascade="all, delete-orphan"
+    )
+
+    notifications: Mapped[list["NotificationModel"]] = relationship(
+        back_populates="user",
         cascade="all, delete-orphan"
     )
 

@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Главная — Quotes
+{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+
+    <div class="hero-content">
+
+        <span class="hero-label">
+            QUOTES
+        </span>
+
+        <h1>
+            Цитаты, которые<br>
+            заставляют думать.
+        </h1>
+
+        <p>
+            Находи вдохновение, сохраняй любимые мысли
+            и делись своими цитатами.
+        </p>
+
+        <div class="hero-actions">
+
+            <a
+                href="/quotes"
+                class="button button-primary"
+            >
+                Смотреть цитаты
+            </a>
+
+            <a
+                href="/quotes/random"
+                class="button button-secondary"
+            >
+                Случайная цитата
+            </a>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="quotes-section">
+
+    <div class="section-header">
+
+        <div>
+            <span class="section-label">
+                DISCOVER
+            </span>
+
+            <h2>
+                Последние цитаты
+            </h2>
+        </div>
+
+        <a
+            href="/quotes"
+            class="section-link"
+        >
+            Все цитаты →
+        </a>
+
+    </div>
+
+
+    <div class="quotes-grid">
+
+        {% for quote in quotes %}
+
+        <article class="quote-card">
+
+            <div class="quote-card-top">
+
+                <span class="quote-category">
+                    {{ quote.category }}
+                </span>
+
+                <button
+                    class="favorite-button"
+                    type="button"
+                    aria-label="Добавить в избранное"
+                >
+                    ♡
+                </button>
+
+            </div>
+
+
+            <blockquote class="quote-text">
+                “{{ quote.text }}”
+            </blockquote>
+
+
+            <div class="quote-card-bottom">
+
+                <div class="quote-author">
+
+                    <span class="author-label">
+                        Автор
+                    </span>
+
+                    <strong>
+                        {{ quote.author }}
+                    </strong>
+
+                </div>
+
+
+                <div class="quote-rating">
+
+                    <span>
+                        ★
+                    </span>
+
+                    <span>
+                        {{ quote.average_rating|default(0) }}
+                    </span>
+
+                </div>
+
+            </div>
+
+        </article>
+
+        {% else %}
+
+        <div class="empty-state">
+
+            <div class="empty-icon">
+                ✦
+            </div>
+
+            <h3>
+                Пока нет цитат
+            </h3>
+
+            <p>
+                Здесь появятся ваши любимые цитаты.
+            </p>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</section>
+
+
+<section class="categories-section">
+
+    <div class="section-header">
+
+        <div>
+            <span class="section-label">
+                EXPLORE
+            </span>
+
+            <h2>
+                Категории
+            </h2>
+        </div>
+
+    </div>
+
+
+    <div class="categories-grid">
+
+        <a
+            href="/quotes/category/Motivation"
+            class="category-card"
+        >
+            <span class="category-icon">
+                ✦
+            </span>
+
+            <span>
+                Мотивация
+            </span>
+        </a>
+
+
+        <a
+            href="/quotes/category/Business"
+            class="category-card"
+        >
+            <span class="category-icon">
+                ◈
+            </span>
+
+            <span>
+                Бизнес
+            </span>
+        </a>
+
+
+        <a
+            href="/quotes/category/Philosophy"
+            class="category-card"
+        >
+            <span class="category-icon">
+                ◇
+            </span>
+
+            <span>
+                Философия
+            </span>
+        </a>
+
+
+        <a
+            href="/quotes/category/Life"
+            class="category-card"
+        >
+            <span class="category-icon">
+                ○
+            </span>
+
+            <span>
+                Жизнь
+            </span>
+        </a>
+
+
+        <a
+            href="/quotes/category/Success"
+            class="category-card"
+        >
+            <span class="category-icon">
+                ↑
+            </span>
+
+            <span>
+                Успех
+            </span>
+        </a>
+
+    </div>
+
+</section>
+
+{% endblock %}

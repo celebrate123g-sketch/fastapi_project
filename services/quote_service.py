@@ -17,7 +17,7 @@ from schemas.quote import (
 from services.log_service import create_log
 from services.history_service import save_quote_history
 from services.duplicate_service import find_duplicate_quote
-
+from fastapi import HTTPException
 
 def attach_rating(
     db: Session,
@@ -321,44 +321,29 @@ def increment_views(
 
 def create_quote(
     db: Session,
-    quote: QuoteCreate
+    quote: QuoteCreate,
+    user_id: int
 ):
-
     duplicate = find_duplicate_quote(
-        db=db,
-        text=quote.text
+        db,
+        quote.text
     )
 
-    if duplicate:
-
+    if duplicate is not None:
         raise HTTPException(
-
             status_code=409,
-
             detail={
-
                 "message": "A very similar quote already exists.",
-
                 "similarity": duplicate["similarity"],
-
-                "quote_id": duplicate["quote"].id,
-
-                "author": duplicate["quote"].author,
-
-                "text": duplicate["quote"].text
-
+                "quote_id": duplicate["quote"].id
             }
-
         )
 
     new_quote = QuoteModel(
-
         author=quote.author,
-
         text=quote.text,
-
-        category=quote.category
-
+        category=quote.category,
+        user_id=user_id
     )
 
     db.add(
@@ -369,16 +354,6 @@ def create_quote(
 
     db.refresh(
         new_quote
-    )
-
-    create_log(
-
-        db,
-
-        "Created quote",
-
-        new_quote.id
-
     )
 
     return attach_rating(

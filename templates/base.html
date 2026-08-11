@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Quotes — коллекция вдохновляющих цитат."
+    >
+
+    <title>
+        {% block title %}
+            Quotes
+        {% endblock %}
+    </title>
+
+    <!-- Основной CSS -->
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', path='css/style.css') }}"
+    >
+
+    <!-- Шрифт -->
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+</head>
+
+<body>
+
+    <!-- ==================== HEADER ==================== -->
+
+    <header class="site-header">
+
+        <div class="header-container">
+
+            <!-- Логотип -->
+
+            <a
+                href="/"
+                class="logo"
+            >
+                Quotes
+            </a>
+
+
+            <!-- Основная навигация -->
+
+            <nav class="main-nav">
+
+                <a
+                    href="/"
+                    class="nav-link"
+                >
+                    Главная
+                </a>
+
+                <a
+                    href="/quotes"
+                    class="nav-link"
+                >
+                    Цитаты
+                </a>
+
+                <a
+                    href="/favorites"
+                    class="nav-link"
+                >
+                    Избранное
+                </a>
+
+            </nav>
+
+
+            <!-- Правая часть -->
+
+            <div class="header-actions">
+
+                <!-- Уведомления -->
+
+                <a
+                    href="/notifications"
+                    class="notification-button"
+                    aria-label="Уведомления"
+                >
+
+                    <span class="notification-icon">
+                        🔔
+                    </span>
+
+                    <span
+                        class="notification-badge"
+                        id="notification-count"
+                        hidden
+                    >
+                        0
+                    </span>
+
+                </a>
+
+
+                <!-- Профиль -->
+
+                <a
+                    href="/profile"
+                    class="profile-button"
+                >
+                    Профиль
+                </a>
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <!-- ==================== MAIN ==================== -->
+
+    <main class="main-content">
+
+        <div class="page-container">
+
+            {% block content %}
+
+            {% endblock %}
+
+        </div>
+
+    </main>
+
+
+    <!-- ==================== FOOTER ==================== -->
+
+    <footer class="site-footer">
+
+        <div class="footer-container">
+
+            <p>
+                © 2026 Quotes
+            </p>
+
+        </div>
+
+    </footer>
+
+
+    <!-- Основной JavaScript -->
+
+    <script
+        src="{{ url_for('static', path='js/app.js') }}"
+    ></script>
+
+
+    {% block scripts %}
+
+    {% endblock %}
+
+</body>
+</html>

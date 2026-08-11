@@ -11,6 +11,8 @@ from schemas.report import (
     ReportStatus
 )
 
+from services.notification_service import notify_user
+
 
 def create_report(
     db: Session,
@@ -18,7 +20,9 @@ def create_report(
 ):
 
     quote = (
-        db.query(QuoteModel)
+        db.query(
+            QuoteModel
+        )
         .filter(
             QuoteModel.id == data.quote_id
         )
@@ -36,9 +40,15 @@ def create_report(
         status=ReportStatus.pending.value
     )
 
-    db.add(report)
+    db.add(
+        report
+    )
+
     db.commit()
-    db.refresh(report)
+
+    db.refresh(
+        report
+    )
 
     return report
 
@@ -49,7 +59,9 @@ def get_report(
 ):
 
     return (
-        db.query(ReportModel)
+        db.query(
+            ReportModel
+        )
         .filter(
             ReportModel.id == report_id
         )
@@ -62,7 +74,9 @@ def get_all_reports(
 ):
 
     return (
-        db.query(ReportModel)
+        db.query(
+            ReportModel
+        )
         .order_by(
             ReportModel.created_at.desc()
         )
@@ -76,7 +90,9 @@ def get_reports_by_quote(
 ):
 
     return (
-        db.query(ReportModel)
+        db.query(
+            ReportModel
+        )
         .filter(
             ReportModel.quote_id == quote_id
         )
@@ -93,7 +109,9 @@ def get_reports_by_user(
 ):
 
     return (
-        db.query(ReportModel)
+        db.query(
+            ReportModel
+        )
         .filter(
             ReportModel.user_id == user_id
         )
@@ -120,7 +138,35 @@ def approve_report(
     report.status = ReportStatus.approved.value
 
     db.commit()
-    db.refresh(report)
+
+    db.refresh(
+        report
+    )
+
+    # Получаем цитату, на которую была отправлена жалоба.
+    quote = (
+        db.query(
+            QuoteModel
+        )
+        .filter(
+            QuoteModel.id == report.quote_id
+        )
+        .first()
+    )
+
+    # Уведомляем автора цитаты о решении модерации.
+    if (
+        quote is not None
+        and quote.user_id is not None
+    ):
+
+        notify_user(
+            db,
+            quote.user_id,
+            "Жалоба рассмотрена",
+            "Жалоба на вашу цитату была рассмотрена модерацией.",
+            "report_approved"
+        )
 
     return report
 
@@ -141,7 +187,35 @@ def reject_report(
     report.status = ReportStatus.rejected.value
 
     db.commit()
-    db.refresh(report)
+
+    db.refresh(
+        report
+    )
+
+    # Получаем цитату, на которую была отправлена жалоба.
+    quote = (
+        db.query(
+            QuoteModel
+        )
+        .filter(
+            QuoteModel.id == report.quote_id
+        )
+        .first()
+    )
+
+    # Уведомляем автора цитаты.
+    if (
+        quote is not None
+        and quote.user_id is not None
+    ):
+
+        notify_user(
+            db,
+            quote.user_id,
+            "Жалоба рассмотрена",
+            "Жалоба на вашу цитату была отклонена модерацией.",
+            "report_rejected"
+        )
 
     return report
 
@@ -159,7 +233,10 @@ def delete_report(
     if report is None:
         return False
 
-    db.delete(report)
+    db.delete(
+        report
+    )
+
     db.commit()
 
     return True
@@ -185,7 +262,8 @@ def get_report_statistics(
             )
         )
         .filter(
-            ReportModel.status == ReportStatus.pending.value
+            ReportModel.status
+            == ReportStatus.pending.value
         )
         .scalar()
     )
@@ -197,7 +275,8 @@ def get_report_statistics(
             )
         )
         .filter(
-            ReportModel.status == ReportStatus.approved.value
+            ReportModel.status
+            == ReportStatus.approved.value
         )
         .scalar()
     )
@@ -209,7 +288,8 @@ def get_report_statistics(
             )
         )
         .filter(
-            ReportModel.status == ReportStatus.rejected.value
+            ReportModel.status
+            == ReportStatus.rejected.value
         )
         .scalar()
     )

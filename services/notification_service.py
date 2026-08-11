@@ -13,15 +13,10 @@ def create_notification(
 ):
 
     new_notification = NotificationModel(
-
         user_id=notification.user_id,
-
         title=notification.title,
-
         message=notification.message,
-
         notification_type=notification.notification_type
-
     )
 
     db.add(
@@ -37,6 +32,27 @@ def create_notification(
     return new_notification
 
 
+def notify_user(
+    db: Session,
+    user_id: int,
+    title: str,
+    message: str,
+    notification_type: str
+):
+
+    notification = NotificationCreate(
+        user_id=user_id,
+        title=title,
+        message=message,
+        notification_type=notification_type
+    )
+
+    return create_notification(
+        db,
+        notification
+    )
+
+
 def get_notifications(
     db: Session,
     user_id: int,
@@ -45,25 +61,18 @@ def get_notifications(
 ):
 
     return (
-
         db.query(
             NotificationModel
         )
-
         .filter(
             NotificationModel.user_id == user_id
         )
-
         .order_by(
             NotificationModel.created_at.desc()
         )
-
         .offset(skip)
-
         .limit(limit)
-
         .all()
-
     )
 
 
@@ -74,23 +83,17 @@ def get_recent_notifications(
 ):
 
     return (
-
         db.query(
             NotificationModel
         )
-
         .filter(
             NotificationModel.user_id == user_id
         )
-
         .order_by(
             NotificationModel.created_at.desc()
         )
-
         .limit(limit)
-
         .all()
-
     )
 
 
@@ -100,25 +103,17 @@ def get_unread_notifications(
 ):
 
     return (
-
         db.query(
             NotificationModel
         )
-
         .filter(
-
             NotificationModel.user_id == user_id,
-
             NotificationModel.is_read == False
-
         )
-
         .order_by(
             NotificationModel.created_at.desc()
         )
-
         .all()
-
     )
 
 
@@ -128,21 +123,14 @@ def get_unread_count(
 ):
 
     return (
-
         db.query(
             NotificationModel
         )
-
         .filter(
-
             NotificationModel.user_id == user_id,
-
             NotificationModel.is_read == False
-
         )
-
         .count()
-
     )
 
 
@@ -153,21 +141,14 @@ def mark_as_read(
 ):
 
     notification = (
-
         db.query(
             NotificationModel
         )
-
         .filter(
-
             NotificationModel.id == notification_id,
-
             NotificationModel.user_id == user_id
-
         )
-
         .first()
-
     )
 
     if notification is None:
@@ -194,21 +175,14 @@ def mark_all_as_read(
 ):
 
     notifications = (
-
         db.query(
             NotificationModel
         )
-
         .filter(
-
             NotificationModel.user_id == user_id,
-
             NotificationModel.is_read == False
-
         )
-
         .all()
-
     )
 
     count = len(
@@ -234,21 +208,14 @@ def delete_notification(
 ):
 
     notification = (
-
         db.query(
             NotificationModel
         )
-
         .filter(
-
             NotificationModel.id == notification_id,
-
             NotificationModel.user_id == user_id
-
         )
-
         .first()
-
     )
 
     if notification is None:
@@ -275,17 +242,13 @@ def delete_all_notifications(
 ):
 
     notifications = (
-
         db.query(
             NotificationModel
         )
-
         .filter(
             NotificationModel.user_id == user_id
         )
-
         .all()
-
     )
 
     count = len(

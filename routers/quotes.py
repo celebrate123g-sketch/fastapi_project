@@ -42,18 +42,16 @@ def home():
     }
 
 
-@router.get("/quotes")
-def read_quotes(
-    skip: int = 0,
-    limit: int = 10,
-    sort: str = "newest",
+@router.post("/quotes")
+def add_quote(
+    quote: QuoteCreate,
+    user_id: int,
     db: Session = Depends(get_db)
 ):
-    return get_all_quotes(
-        db=db,
-        skip=skip,
-        limit=limit,
-        sort=sort
+    return create_quote(
+        db,
+        quote,
+        user_id
     )
 
 

@@ -199,6 +199,16 @@ class QuoteModel(Base):
         cascade="all, delete-orphan"
     )
 
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True,
+        index=True
+    )
+
+    user: Mapped["UserModel"] = relationship(
+        back_populates="quotes"
+    )
+
 class NotificationModel(Base):
 
     __tablename__ = "notifications"
@@ -388,6 +398,10 @@ class UserModel(Base):
     notifications: Mapped[list["NotificationModel"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan"
+    )
+
+    quotes: Mapped[list["QuoteModel"]] = relationship(
+        back_populates="user"
     )
 
 

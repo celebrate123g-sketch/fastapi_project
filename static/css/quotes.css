@@ -1,0 +1,351 @@
+/* =========================
+   QUOTES PAGE
+   ========================= */
+
+.quotes-page {
+    padding: 20px 0 70px;
+}
+
+
+/* =========================
+   PAGE HEADER
+   ========================= */
+
+.quotes-page-header {
+    margin-bottom: 35px;
+}
+
+.quotes-page-header h1 {
+    margin-bottom: 10px;
+
+    color: var(--text-primary);
+
+    font-size: clamp(34px, 5vw, 52px);
+    font-weight: 800;
+    line-height: 1.1;
+
+    letter-spacing: -1.5px;
+}
+
+.quotes-page-header p {
+    max-width: 600px;
+
+    color: var(--text-secondary);
+
+    font-size: 16px;
+}
+
+
+/* =========================
+   TOOLBAR
+   ========================= */
+
+.quotes-toolbar {
+    margin-bottom: 30px;
+    padding: 18px;
+
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    background: var(--bg-card);
+
+    border: 1px solid var(--border);
+    border-radius: var(--radius-medium);
+}
+
+
+/* =========================
+   SEARCH
+   ========================= */
+
+.search-box {
+    position: relative;
+    flex: 1;
+}
+
+.search-input {
+    width: 100%;
+    height: 44px;
+
+    padding: 0 15px;
+
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+
+    outline: none;
+
+    font-family: inherit;
+    font-size: 14px;
+
+    transition:
+        border-color var(--transition),
+        background var(--transition);
+}
+
+.search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.search-input:focus {
+    background: var(--bg-primary);
+    border-color: var(--accent);
+}
+
+
+/* =========================
+   FILTERS
+   ========================= */
+
+.filter-select {
+    min-width: 160px;
+    height: 44px;
+
+    padding: 0 12px;
+
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+
+    outline: none;
+
+    font-family: inherit;
+    font-size: 14px;
+
+    cursor: pointer;
+
+    transition: border-color var(--transition);
+}
+
+.filter-select:focus {
+    border-color: var(--accent);
+}
+
+.filter-select option {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+
+/* =========================
+   RESULTS HEADER
+   ========================= */
+
+.quotes-results-header {
+    margin-bottom: 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+}
+
+.quotes-count {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.sort-button {
+    padding: 8px 12px;
+
+    background: transparent;
+    color: var(--text-secondary);
+
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+
+    font-size: 13px;
+
+    transition:
+        color var(--transition),
+        background var(--transition),
+        border-color var(--transition);
+}
+
+.sort-button:hover,
+.sort-button.active {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border-color: var(--accent);
+}
+
+
+/* =========================
+   QUOTES GRID
+   ========================= */
+
+.quotes-page-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 20px;
+}
+
+
+/* =========================
+   QUOTE CARD
+   ========================= */
+
+.quotes-page-grid .quote-card {
+    min-height: 310px;
+}
+
+
+/* =========================
+   EMPTY RESULT
+   ========================= */
+
+.quotes-empty {
+    grid-column: 1 / -1;
+
+    padding: 80px 30px;
+
+    text-align: center;
+
+    background: var(--bg-card);
+
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-large);
+}
+
+.quotes-empty-icon {
+    width: 56px;
+    height: 56px;
+
+    margin: 0 auto 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(124, 92, 255, .1);
+    color: var(--accent);
+
+    border-radius: 50%;
+
+    font-size: 21px;
+}
+
+.quotes-empty h2 {
+    margin-bottom: 8px;
+
+    color: var(--text-primary);
+
+    font-size: 20px;
+}
+
+.quotes-empty p {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+
+/* =========================
+   PAGINATION
+   ========================= */
+
+.pagination {
+    margin-top: 35px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+}
+
+.pagination-button {
+    min-width: 38px;
+    height: 38px;
+
+    padding: 0 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: var(--bg-card);
+    color: var(--text-secondary);
+
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+
+    font-size: 13px;
+    font-weight: 500;
+
+    transition:
+        background var(--transition),
+        color var(--transition),
+        border-color var(--transition);
+}
+
+.pagination-button:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+    border-color: var(--accent);
+}
+
+.pagination-button.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.pagination-button.disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+
+@media (max-width: 1000px) {
+    .quotes-page-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .quotes-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .filter-select {
+        width: 100%;
+    }
+
+    .quotes-results-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 600px) {
+    .quotes-page {
+        padding-top: 10px;
+    }
+
+    .quotes-page-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .quotes-page-header h1 {
+        font-size: 36px;
+    }
+
+    .pagination {
+        flex-wrap: wrap;
+    }
+}

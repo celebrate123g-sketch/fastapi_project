@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Цитаты — Quotes
+{% endblock %}
+
+{% block content %}
+
+<div class="quotes-page">
+
+    <header class="quotes-page-header">
+
+        <span class="section-label">
+            DISCOVER
+        </span>
+
+        <h1>
+            Все цитаты
+        </h1>
+
+        <p>
+            Исследуй коллекцию цитат,
+            находи интересные мысли и сохраняй
+            понравившиеся.
+        </p>
+
+    </header>
+
+
+    <section class="quotes-toolbar">
+
+        <div class="search-box">
+
+            <input
+                type="search"
+                class="search-input"
+                placeholder="Найти цитату или автора..."
+                aria-label="Поиск цитат"
+            >
+
+        </div>
+
+
+        <select
+            class="filter-select"
+            aria-label="Категория"
+        >
+
+            <option value="">
+                Все категории
+            </option>
+
+            <option value="Motivation">
+                Мотивация
+            </option>
+
+            <option value="Business">
+                Бизнес
+            </option>
+
+            <option value="Philosophy">
+                Философия
+            </option>
+
+            <option value="Life">
+                Жизнь
+            </option>
+
+            <option value="Success">
+                Успех
+            </option>
+
+        </select>
+
+
+        <select
+            class="filter-select"
+            aria-label="Сортировка"
+        >
+
+            <option value="newest">
+                Сначала новые
+            </option>
+
+            <option value="oldest">
+                Сначала старые
+            </option>
+
+            <option value="rating">
+                По рейтингу
+            </option>
+
+            <option value="views">
+                По просмотрам
+            </option>
+
+        </select>
+
+    </section>
+
+
+    <div class="quotes-results-header">
+
+        <span class="quotes-count">
+            Найдено: {{ quotes|length }}
+        </span>
+
+    </div>
+
+
+    <section class="quotes-page-grid">
+
+        {% for quote in quotes %}
+
+        <article class="quote-card">
+
+            <div class="quote-card-top">
+
+                <span class="quote-category">
+                    {{ quote.category }}
+                </span>
+
+                <button
+                    class="favorite-button"
+                    type="button"
+                    aria-label="Добавить в избранное"
+                >
+                    ♡
+                </button>
+
+            </div>
+
+
+            <blockquote class="quote-text">
+                “{{ quote.text }}”
+            </blockquote>
+
+
+            <div class="quote-card-bottom">
+
+                <div class="quote-author">
+
+                    <span class="author-label">
+                        Автор
+                    </span>
+
+                    <strong>
+                        {{ quote.author }}
+                    </strong>
+
+                </div>
+
+
+                <div class="quote-rating">
+
+                    <span>★</span>
+
+                    <span>
+                        {{ quote.average_rating|default(0) }}
+                    </span>
+
+                </div>
+
+            </div>
+
+        </article>
+
+        {% else %}
+
+        <div class="quotes-empty">
+
+            <div class="quotes-empty-icon">
+                ✦
+            </div>
+
+            <h2>
+                Цитаты не найдены
+            </h2>
+
+            <p>
+                Попробуй изменить поисковый запрос
+                или выбранную категорию.
+            </p>
+
+        </div>
+
+        {% endfor %}
+
+    </section>
+
+
+    {% if quotes %}
+
+    <nav
+        class="pagination"
+        aria-label="Навигация по страницам"
+    >
+
+        <button
+            class="pagination-button disabled"
+            type="button"
+        >
+            ←
+        </button>
+
+        <button
+            class="pagination-button active"
+            type="button"
+        >
+            1
+        </button>
+
+        <button
+            class="pagination-button"
+            type="button"
+        >
+            2
+        </button>
+
+        <button
+            class="pagination-button"
+            type="button"
+        >
+            3
+        </button>
+
+        <button
+            class="pagination-button"
+            type="button"
+        >
+            →
+        </button>
+
+    </nav>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

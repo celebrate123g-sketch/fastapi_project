@@ -1,8 +1,8 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
-
+from fastapi.templating import Jinja2Templates
 from database.database import get_db
 from schemas.quote import QuoteCreate, QuoteUpdate
 from services.quote_service import (
@@ -28,6 +28,10 @@ from services.quote_service import (
     force_delete_quote,
     clear_trash,
     restore_all_quotes,
+)
+
+templates = Jinja2Templates(
+    directory="templates"
 )
 
 router = APIRouter(
@@ -251,4 +255,19 @@ def restore_all(
 ):
     return restore_all_quotes(
         db
+    )
+
+@router.get("/quotes-page")
+def quotes_page(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    quotes = get_all_quotes(db)
+
+    return templates.TemplateResponse(
+        "quotes.html",
+        {
+            "request": request,
+            "quotes": quotes
+        }
     )

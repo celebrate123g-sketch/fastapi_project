@@ -16,7 +16,9 @@ from routers.daily_quote import router as daily_quote_router
 from routers.reports import router as reports_router
 from routers.dashboard import router as dashboard_router
 from routers.similar import router as similar_router
+from routers.badges import router as badges_router
 from routers import recommendations
+
 
 app = FastAPI(
     title="Quotes API",
@@ -35,6 +37,11 @@ app.mount(
     name="uploads"
 )
 
+
+# =========================
+# ROUTERS
+# =========================
+
 app.include_router(quotes_router)
 app.include_router(comments_router)
 app.include_router(logs_router)
@@ -49,4 +56,4 @@ app.include_router(daily_quote_router)
 app.include_router(reports_router)
 app.include_router(badges_router)
 app.include_router(dashboard_router)
-app.include_router(dashboard_router)
+app.include_router(similar_router)

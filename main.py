@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-
+from fastapi.templating import Jinja2Templates
 from database.init_db import create_tables
 
 from routers.quotes import router as quotes_router
@@ -19,10 +19,13 @@ from routers.similar import router as similar_router
 from routers.badges import router as badges_router
 from routers import recommendations
 
-
 app = FastAPI(
     title="Quotes API",
     version="4.0.0"
+)
+
+templates = Jinja2Templates(
+    directory="templates"
 )
 
 

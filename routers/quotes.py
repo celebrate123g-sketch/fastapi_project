@@ -38,6 +38,9 @@ router = APIRouter(
     tags=["Quotes"]
 )
 
+templates = Jinja2Templates(
+    directory="templates"
+)
 
 @router.get("/")
 def home():
@@ -255,6 +258,21 @@ def restore_all(
 ):
     return restore_all_quotes(
         db
+    )
+
+@router.get("/quotes-page")
+def quotes_page(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    quotes = get_all_quotes(db)
+
+    return templates.TemplateResponse(
+        "quotes.html",
+        {
+            "request": request,
+            "quotes": quotes
+        }
     )
 
 @router.get("/quotes-page")

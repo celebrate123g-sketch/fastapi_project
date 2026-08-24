@@ -265,27 +265,58 @@ def quotes_page(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    quotes = get_all_quotes(db)
+    if search:
+        quotes = search_quotes(
+            db,
+            author=search,
+            text=search
+        )
+    elif category:
+        quotes = get_quotes_by_category(
+            db,
+            category
+        )
+    else:
+        quotes = get_all_quotes(db)
 
     return templates.TemplateResponse(
         "quotes.html",
-        {
+            {
             "request": request,
-            "quotes": quotes
-        }
-    )
+            "quotes": quotes,
+            "search": search or "",
+            "selected_category": category or ""
+            }
+        )
 
 @router.get("/quotes-page")
 def quotes_page(
     request: Request,
+    search: Optional[str] = None,
+    category: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    quotes = get_all_quotes(db)
+    if search:
+        quotes = search_quotes(
+            db,
+            text=search
+        )
+
+    elif category:
+        quotes = get_quotes_by_category(
+            db,
+            category
+        )
+
+    else:
+        quotes = get_all_quotes(db)
 
     return templates.TemplateResponse(
         "quotes.html",
         {
             "request": request,
-            "quotes": quotes
+            "quotes": quotes,
+            "search": search or "",
+            "selected_category": category or ""
         }
     )

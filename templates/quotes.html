@@ -31,12 +31,29 @@
 
         <div class="search-box">
 
-            <input
-                type="search"
-                class="search-input"
-                placeholder="Найти цитату или автора..."
-                aria-label="Поиск цитат"
-            >
+<form
+    class="search-box"
+    method="get"
+    action="/quotes-page"
+>
+
+    <input
+        type="search"
+        name="search"
+        class="search-input"
+        value="{{ search }}"
+        placeholder="Найти цитату или автора..."
+        aria-label="Поиск цитат"
+    >
+
+    <button
+        type="submit"
+        class="search-button"
+    >
+        Найти
+    </button>
+
+</form>
 
         </div>
 

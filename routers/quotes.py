@@ -38,9 +38,6 @@ router = APIRouter(
     tags=["Quotes"]
 )
 
-templates = Jinja2Templates(
-    directory="templates"
-)
 
 @router.get("/")
 def home():
@@ -263,53 +260,25 @@ def restore_all(
 @router.get("/quotes-page")
 def quotes_page(
     request: Request,
-    db: Session = Depends(get_db)
-):
-    if search:
-        quotes = search_quotes(
-            db,
-            author=search,
-            text=search
-        )
-    elif category:
-        quotes = get_quotes_by_category(
-            db,
-            category
-        )
-    else:
-        quotes = get_all_quotes(db)
-
-    return templates.TemplateResponse(
-        "quotes.html",
-            {
-            "request": request,
-            "quotes": quotes,
-            "search": search or "",
-            "selected_category": category or ""
-            }
-        )
-
-@router.get("/quotes-page")
-def quotes_page(
-    request: Request,
     search: Optional[str] = None,
     category: Optional[str] = None,
+    sort: str = "newest",
     db: Session = Depends(get_db)
 ):
-    if search:
+    if search or category:
+
         quotes = search_quotes(
             db,
-            text=search
-        )
-
-    elif category:
-        quotes = get_quotes_by_category(
-            db,
-            category
+            text=search,
+            category=category
         )
 
     else:
-        quotes = get_all_quotes(db)
+
+        quotes = get_all_quotes(
+            db,
+            sort=sort
+        )
 
     return templates.TemplateResponse(
         "quotes.html",
@@ -317,6 +286,7 @@ def quotes_page(
             "request": request,
             "quotes": quotes,
             "search": search or "",
-            "selected_category": category or ""
+            "selected_category": category or "",
+            "selected_sort": sort
         }
     )

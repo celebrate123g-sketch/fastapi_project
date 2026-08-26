@@ -27,63 +27,99 @@
     </header>
 
 
-    <section class="quotes-toolbar">
+    <!-- =========================
+         SEARCH AND FILTERS
+         ========================= -->
+
+    <form
+        class="quotes-toolbar"
+        method="get"
+        action="/quotes-page"
+    >
 
         <div class="search-box">
 
-<form
-    class="search-box"
-    method="get"
-    action="/quotes-page"
->
+            <input
+                type="search"
+                name="search"
+                class="search-input"
+                value="{{ search }}"
+                placeholder="Найти цитату или автора..."
+                aria-label="Поиск цитат"
+            >
 
-    <input
-        type="search"
-        name="search"
-        class="search-input"
-        value="{{ search }}"
-        placeholder="Найти цитату или автора..."
-        aria-label="Поиск цитат"
-    >
-
-    <button
-        type="submit"
-        class="search-button"
-    >
-        Найти
-    </button>
-
-</form>
+            <button
+                type="submit"
+                class="search-button"
+            >
+                Найти
+            </button>
 
         </div>
 
 
         <select
             class="filter-select"
+            name="category"
             aria-label="Категория"
         >
 
-            <option value="">
+            <option
+                value=""
+                {% if not selected_category %}
+                    selected
+                {% endif %}
+            >
                 Все категории
             </option>
 
-            <option value="Motivation">
+
+            <option
+                value="Motivation"
+                {% if selected_category == "Motivation" %}
+                    selected
+                {% endif %}
+            >
                 Мотивация
             </option>
 
-            <option value="Business">
+
+            <option
+                value="Business"
+                {% if selected_category == "Business" %}
+                    selected
+                {% endif %}
+            >
                 Бизнес
             </option>
 
-            <option value="Philosophy">
+
+            <option
+                value="Philosophy"
+                {% if selected_category == "Philosophy" %}
+                    selected
+                {% endif %}
+            >
                 Философия
             </option>
 
-            <option value="Life">
+
+            <option
+                value="Life"
+                {% if selected_category == "Life" %}
+                    selected
+                {% endif %}
+            >
                 Жизнь
             </option>
 
-            <option value="Success">
+
+            <option
+                value="Success"
+                {% if selected_category == "Success" %}
+                    selected
+                {% endif %}
+            >
                 Успех
             </option>
 
@@ -92,29 +128,65 @@
 
         <select
             class="filter-select"
+            name="sort"
             aria-label="Сортировка"
         >
 
-            <option value="newest">
+            <option
+                value="newest"
+                {% if selected_sort == "newest" %}
+                    selected
+                {% endif %}
+            >
                 Сначала новые
             </option>
 
-            <option value="oldest">
+
+            <option
+                value="oldest"
+                {% if selected_sort == "oldest" %}
+                    selected
+                {% endif %}
+            >
                 Сначала старые
             </option>
 
-            <option value="rating">
+
+            <option
+                value="rating"
+                {% if selected_sort == "rating" %}
+                    selected
+                {% endif %}
+            >
                 По рейтингу
             </option>
 
-            <option value="views">
+
+            <option
+                value="views"
+                {% if selected_sort == "views" %}
+                    selected
+                {% endif %}
+            >
                 По просмотрам
             </option>
 
         </select>
 
-    </section>
 
+        <button
+            type="submit"
+            class="search-button"
+        >
+            Применить
+        </button>
+
+    </form>
+
+
+    <!-- =========================
+         RESULTS COUNT
+         ========================= -->
 
     <div class="quotes-results-header">
 
@@ -124,6 +196,10 @@
 
     </div>
 
+
+    <!-- =========================
+         QUOTES
+         ========================= -->
 
     <section class="quotes-page-grid">
 
@@ -136,6 +212,7 @@
                 <span class="quote-category">
                     {{ quote.category }}
                 </span>
+
 
                 <button
                     class="favorite-button"
@@ -170,7 +247,9 @@
 
                 <div class="quote-rating">
 
-                    <span>★</span>
+                    <span>
+                        ★
+                    </span>
 
                     <span>
                         {{ quote.average_rating|default(0) }}
@@ -181,6 +260,7 @@
             </div>
 
         </article>
+
 
         {% else %}
 
@@ -206,6 +286,10 @@
     </section>
 
 
+    <!-- =========================
+         PAGINATION
+         ========================= -->
+
     {% if quotes %}
 
     <nav
@@ -220,12 +304,14 @@
             ←
         </button>
 
+
         <button
             class="pagination-button active"
             type="button"
         >
             1
         </button>
+
 
         <button
             class="pagination-button"
@@ -234,12 +320,14 @@
             2
         </button>
 
+
         <button
             class="pagination-button"
             type="button"
         >
             3
         </button>
+
 
         <button
             class="pagination-button"

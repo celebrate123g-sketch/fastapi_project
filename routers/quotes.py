@@ -77,16 +77,6 @@ def read_quote(
     )
 
 
-@router.post("/quotes")
-def add_quote(
-    quote: QuoteCreate,
-    db: Session = Depends(get_db)
-):
-    return create_quote(
-        db,
-        quote
-    )
-
 
 @router.put("/quotes/{quote_id}")
 def edit_quote(
@@ -265,20 +255,12 @@ def quotes_page(
     sort: str = "newest",
     db: Session = Depends(get_db)
 ):
-    if search or category:
-
-        quotes = search_quotes(
-            db,
-            text=search,
-            category=category
-        )
-
-    else:
-
-        quotes = get_all_quotes(
-            db,
-            sort=sort
-        )
+    quotes = search_quotes(
+        db,
+        text=search,
+        category=category,
+        sort=sort
+    )
 
     return templates.TemplateResponse(
         "quotes.html",

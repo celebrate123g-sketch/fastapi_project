@@ -795,23 +795,19 @@ def search_quotes(
     db: Session,
     author: str | None = None,
     text: str | None = None,
-    category: str | None = None
+    category: str | None = None,
+    sort: str = "newest",
+    skip: int = 0,
+    limit: int = 10
 ):
-
     query = (
-
-        db.query(
-            QuoteModel
-        )
-
+        db.query(QuoteModel)
         .filter(
             QuoteModel.is_deleted == False
         )
-
     )
 
     if author:
-
         query = query.filter(
             QuoteModel.author.ilike(
                 f"%{author}%"
@@ -819,7 +815,6 @@ def search_quotes(
         )
 
     if text:
-
         query = query.filter(
             QuoteModel.text.ilike(
                 f"%{text}%"
@@ -827,24 +822,99 @@ def search_quotes(
         )
 
     if category:
-
         query = query.filter(
             QuoteModel.category == category
         )
 
-    quotes = query.all()
+    if sort == "newest":
+
+        query = query.order_by(
+            desc(
+                QuoteModel.created_at
+            )
+        )
+
+    elif sort == "oldest":
+
+        query = query.order_by(
+            QuoteModel.created_at
+        )
+
+    elif sort == "likes":
+
+        query = query.order_by(
+            desc(
+                QuoteModel.likes
+            )
+        )
+
+    elif sort == "views":
+
+        query = query.order_by(
+            desc(
+                QuoteModel.views
+            )
+        )
+
+    elif sort == "author":
+
+        query = query.order_by(
+            QuoteModel.author
+        )
+
+    elif sort == "rating":
+
+        quotes = query.all()
+
+        quotes.sort(
+            key=lambda quote: (
+                db.query(
+                    func.avg(
+                        QuoteRatingModel.rating
+                    )
+                )
+                .filter(
+                    QuoteRatingModel.quote_id == quote.id
+                )
+                .scalar()
+                or 0
+            ),
+            reverse=True
+        )
+
+        quotes = quotes[
+            skip:skip + limit
+        ]
+
+        return [
+            attach_rating(
+                db,
+                quote
+            )
+            for quote in quotes
+        ]
+
+    else:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid sort type."
+        )
+
+    quotes = (
+        query
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
     return [
-
         attach_rating(
             db,
             quote
         )
-
         for quote in quotes
-
     ]
-
 
 def get_trending_quotes(
     db: Session

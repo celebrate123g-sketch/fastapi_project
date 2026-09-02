@@ -292,53 +292,215 @@
 
     {% if quotes %}
 
-    <nav
-        class="pagination"
-        aria-label="Навигация по страницам"
+{% if total_pages > 1 %}
+
+<nav
+    class="pagination"
+    aria-label="Навигация по страницам"
+>
+
+    {% if page > 1 %}
+
+    <a
+        class="pagination-button"
+        href="?page={{ page - 1 }}&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
     >
+        ←
+    </a>
 
-        <button
-            class="pagination-button disabled"
-            type="button"
-        >
-            ←
-        </button>
+    {% else %}
 
-
-        <button
-            class="pagination-button active"
-            type="button"
-        >
-            1
-        </button>
-
-
-        <button
-            class="pagination-button"
-            type="button"
-        >
-            2
-        </button>
-
-
-        <button
-            class="pagination-button"
-            type="button"
-        >
-            3
-        </button>
-
-
-        <button
-            class="pagination-button"
-            type="button"
-        >
-            →
-        </button>
-
-    </nav>
+    <span class="pagination-button disabled">
+        ←
+    </span>
 
     {% endif %}
+
+
+    {% if page <= 3 %}
+
+        {% for page_number in range(1, [total_pages, 5]|min + 1) %}
+
+            {% if page_number == page %}
+
+            <a
+                class="pagination-button active"
+                href="?page={{ page_number }}&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
+            >
+                {{ page_number }}
+            </a>
+
+            {% else %}
+
+            <a
+                class="pagination-button"
+                href="?page={{ page_number }}&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
+            >
+                {{ page_number }}
+            </a>
+
+            {% endif %}
+
+        {% endfor %}
+
+        {% if total_pages > 5 %}
+
+        <span class="pagination-dots">...</span>
+
+        <a
+            class="pagination-button"
+            href="?page={{ total_pages }}&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
+        >
+            {{ total_pages }}
+        </a>
+
+        {% endif %}
+
+
+    {% elif page >= total_pages - 2 %}
+
+        <a
+            class="pagination-button"
+            href="?page=1&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
+        >
+            1
+        </a>
+
+        {% if total_pages > 5 %}
+
+        <span class="pagination-dots">...</span>
+
+        {% endif %}
+
+
+        {% for page_number in range([total_pages - 4, 1]|max, total_pages + 1) %}
+
+            {% if page_number == page %}
+
+            <a
+                class="pagination-button active"
+                href="?page={{ page_number }}&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
+            >
+                {{ page_number }}
+            </a>
+
+            {% else %}
+
+            <a
+                class="pagination-button"
+                href="?page={{ page_number }}&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
+            >
+                {{ page_number }}
+            </a>
+
+            {% endif %}
+
+        {% endfor %}
+
+
+    {% else %}
+
+        <a
+            class="pagination-button"
+            href="?page=1&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
+        >
+            1
+        </a>
+
+        <span class="pagination-dots">...</span>
+
+
+        {% for page_number in range(page - 1, page + 2) %}
+
+            <a
+                class="pagination-button {% if page_number == page %}active{% endif %}"
+                href="?page={{ page_number }}&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
+            >
+                {{ page_number }}
+            </a>
+
+        {% endfor %}
+
+
+        <span class="pagination-dots">...</span>
+
+        <a
+            class="pagination-button"
+            href="?page={{ total_pages }}&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
+        >
+            {{ total_pages }}
+        </a>
+
+    {% endif %}
+
+
+    {% if page < total_pages %}
+
+    <a
+        class="pagination-button"
+        href="?page={{ page + 1 }}&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
+    >
+        →
+    </a>
+
+    {% else %}
+
+    <span class="pagination-button disabled">
+        →
+    </span>
+
+    {% endif %}
+
+</nav>
+
+{% endif %}
+
+
+    {% for page_number in range(1, total_pages + 1) %}
+
+        {% if page_number == page %}
+
+        <a
+            class="pagination-button active"
+            href="?page={{ page_number }}&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
+        >
+            {{ page_number }}
+        </a>
+
+        {% else %}
+
+        <a
+            class="pagination-button"
+            href="?page={{ page_number }}&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
+        >
+            {{ page_number }}
+        </a>
+
+        {% endif %}
+
+    {% endfor %}
+
+
+    {% if page < total_pages %}
+
+    <a
+        class="pagination-button"
+        href="?page={{ page + 1 }}&search={{ search }}&category={{ selected_category }}&sort={{ selected_sort }}"
+    >
+        →
+    </a>
+
+    {% else %}
+
+    <span class="pagination-button disabled">
+        →
+    </span>
+
+    {% endif %}
+
+</nav>
+
+{% endif %}
 
 </div>
 

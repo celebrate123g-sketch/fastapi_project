@@ -807,17 +807,20 @@ def search_quotes(
         )
     )
 
-    if author:
-        query = query.filter(
-            QuoteModel.author.ilike(
-                f"%{author}%"
-            )
-        )
+    if author or text:
+        search_value = author or text
 
-    if text:
         query = query.filter(
-            QuoteModel.text.ilike(
-                f"%{text}%"
+            (
+                QuoteModel.author.ilike(
+                    f"%{search_value}%"
+                )
+            )
+            |
+            (
+                QuoteModel.text.ilike(
+                    f"%{search_value}%"
+                )
             )
         )
 

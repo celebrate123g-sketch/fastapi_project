@@ -28,6 +28,7 @@ from services.quote_service import (
     force_delete_quote,
     clear_trash,
     restore_all_quotes,
+    count_search_quotes,
 )
 
 templates = Jinja2Templates(
@@ -261,6 +262,20 @@ def quotes_page(
     if page < 1:
         page = 1
 
+    total_quotes = count_search_quotes(
+        db,
+        text=search,
+        category=category
+    )
+
+    total_pages = max(
+        1,
+        (total_quotes + limit - 1) // limit
+    )
+
+    if page > total_pages:
+        page = total_pages
+
     skip = (page - 1) * limit
 
     quotes = search_quotes(
@@ -272,46 +287,6 @@ def quotes_page(
         limit=limit
     )
 
-    total = (
-        db.query(QuoteModel)
-        .filter(
-            QuoteModel.is_deleted == False
-        )
-    )
-
-    if search:
-        total = total.filter(
-            QuoteModel.text.ilike(
-                f"%{search}%"
-            )
-        )
-
-    if category:
-        total = total.filter(
-            QuoteModel.category == category
-        )
-
-    total = total.count()
-
-    total_pages = max(
-        1,
-        (total + limit - 1) // limit
-    )
-
-    if page > total_pages:
-        page = total_pages
-
-        skip = (page - 1) * limit
-
-        quotes = search_quotes(
-            db,
-            text=search,
-            category=category,
-            sort=sort,
-            skip=skip,
-            limit=limit
-        )
-
     return templates.TemplateResponse(
         "quotes.html",
         {
@@ -320,8 +295,9 @@ def quotes_page(
             "search": search or "",
             "selected_category": category or "",
             "selected_sort": sort,
-            "page": page,
+            "current_page": page,
             "total_pages": total_pages,
-            "total": total
+            "has_previous": page > 1,
+            "has_next": page < total_pages
         }
     )

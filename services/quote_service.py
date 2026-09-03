@@ -790,6 +790,39 @@ def get_most_viewed_quotes(
 
     ]
 
+def count_search_quotes(
+    db: Session,
+    author: str | None = None,
+    text: str | None = None,
+    category: str | None = None
+):
+    query = (
+        db.query(QuoteModel)
+        .filter(
+            QuoteModel.is_deleted == False
+        )
+    )
+
+    if author:
+        query = query.filter(
+            QuoteModel.author.ilike(
+                f"%{author}%"
+            )
+        )
+
+    if text:
+        query = query.filter(
+            QuoteModel.text.ilike(
+                f"%{text}%"
+            )
+        )
+
+    if category:
+        query = query.filter(
+            QuoteModel.category == category
+        )
+
+    return query.count()
 
 def search_quotes(
     db: Session,

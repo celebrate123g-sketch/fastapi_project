@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ quote.author }} — Quotes
+{% endblock %}
+
+{% block content %}
+
+<div class="quote-page">
+
+    <a
+        href="/quotes-page"
+        class="back-button"
+    >
+        ← Все цитаты
+    </a>
+
+
+    <article class="single-quote-card">
+
+        <div class="single-quote-top">
+
+            <span class="quote-category">
+                {{ quote.category }}
+            </span>
+
+        </div>
+
+
+        <blockquote class="single-quote-text">
+            “{{ quote.text }}”
+        </blockquote>
+
+
+        <div class="single-quote-author">
+
+            <span class="author-label">
+                Автор
+            </span>
+
+            <strong>
+                {{ quote.author }}
+            </strong>
+
+        </div>
+
+
+        <div class="single-quote-stats">
+
+            <div class="quote-stat">
+                <span>★</span>
+                <strong>
+                    {{ quote.average_rating|default(0) }}
+                </strong>
+                <small>
+                    Рейтинг
+                </small>
+            </div>
+
+
+            <div class="quote-stat">
+                <span>❤️</span>
+                <strong>
+                    {{ quote.likes }}
+                </strong>
+                <small>
+                    Лайки
+                </small>
+            </div>
+
+
+            <div class="quote-stat">
+                <span>👁</span>
+                <strong>
+                    {{ quote.views }}
+                </strong>
+                <small>
+                    Просмотры
+                </small>
+            </div>
+
+
+            <div class="quote-stat">
+                <span>💬</span>
+                <strong>
+                    {{ quote.comments_count }}
+                </strong>
+                <small>
+                    Комментарии
+                </small>
+            </div>
+
+        </div>
+
+
+        <div class="single-quote-actions">
+
+        <button
+            type="button"
+            class="action-button"
+            id="like-button"
+            data-quote-id="{{ quote.id }}"
+            data-liked="false"
+        >
+            ❤️ Нравится
+        </button>
+
+        <button
+            type="button"
+            class="action-button"
+            id="favorite-button"
+            data-quote-id="{{ quote.id }}"
+            data-favorite="{{ 'true' if quote.favorite else 'false' }}"
+        >
+            {% if quote.favorite %}
+                ♥ В избранном
+            {% else %}
+                ♡ В избранное
+            {% endif %}
+        </button>
+
+    </div>
+
+    </article>
+
+</div>
+
+{% endblock %}

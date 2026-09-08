@@ -301,3 +301,22 @@ def quotes_page(
             "has_next": page < total_pages
         }
     )
+
+@router.get("/quotes-page/{quote_id}")
+def quote_page(
+    request: Request,
+    quote_id: int,
+    db: Session = Depends(get_db)
+):
+    quote = get_quote_by_id(
+        db,
+        quote_id
+    )
+
+    return templates.TemplateResponse(
+        "quote.html",
+        {
+            "request": request,
+            "quote": quote
+        }
+    )

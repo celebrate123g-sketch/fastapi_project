@@ -123,3 +123,120 @@ document.addEventListener(
 
     }
 );
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    const likeButton = document.getElementById("like-button");
+    const favoriteButton = document.getElementById("favorite-button");
+
+
+    // LIKE
+
+    if (likeButton) {
+
+        likeButton.addEventListener("click", async () => {
+
+            const quoteId = likeButton.dataset.quoteId;
+            const liked = likeButton.dataset.liked === "true";
+
+            const action = liked ? "unlike" : "like";
+
+            try {
+
+                const response = await fetch(
+                    `/quotes/${quoteId}/${action}`,
+                    {
+                        method: "PUT"
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error("Ошибка при изменении лайка");
+                }
+
+                const quote = await response.json();
+
+                likeButton.dataset.liked = String(!liked);
+
+                if (!liked) {
+                    likeButton.textContent = "💔 Убрать лайк";
+                } else {
+                    likeButton.textContent = "❤️ Нравится";
+                }
+
+                const likesElement = document.querySelector(
+                    ".single-quote-stats .quote-stat:nth-child(2) strong"
+                );
+
+                if (likesElement) {
+                    likesElement.textContent = quote.likes;
+                }
+
+            } catch (error) {
+
+                console.error(error);
+
+            }
+
+        });
+
+    }
+
+
+    // FAVORITE
+
+    if (favoriteButton) {
+
+        favoriteButton.addEventListener("click", async () => {
+
+            const quoteId = favoriteButton.dataset.quoteId;
+            const favorite =
+                favoriteButton.dataset.favorite === "true";
+
+            const action = favorite
+                ? "unfavorite"
+                : "favorite";
+
+            try {
+
+                const response = await fetch(
+                    `/quotes/${quoteId}/${action}`,
+                    {
+                        method: "PUT"
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Ошибка при изменении избранного"
+                    );
+                }
+
+                const quote = await response.json();
+
+                favoriteButton.dataset.favorite =
+                    String(!favorite);
+
+                if (!favorite) {
+
+                    favoriteButton.textContent =
+                        "♥ В избранном";
+
+                } else {
+
+                    favoriteButton.textContent =
+                        "♡ В избранное";
+
+                }
+
+            } catch (error) {
+
+                console.error(error);
+
+            }
+
+        });
+
+    }
+
+});

@@ -41,6 +41,13 @@ async function updateNotificationCount() {
 
         const data = await response.json();
 
+    const commentsCount =
+        document.getElementById("comments-count");
+
+    if (commentsCount) {
+        commentsCount.textContent = comments.length;
+    }
+
         const count = Number(
             data.count ?? 0
         );
@@ -240,3 +247,250 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 });
+const commentForm = document.getElementById("comment-form");
+const commentsList = document.getElementById("comments-list");
+
+if (commentForm && commentsList) {
+
+    async function loadComments() {
+        const response = await fetch(
+            `/quotes/${quoteId}/comments`
+        );
+
+        if (!response.ok) {
+            commentsList.innerHTML =
+                "<p>Не удалось загрузить комментарии.</p>";
+
+            return;
+        }
+
+        const comments = await response.json();
+
+        commentsList.innerHTML = "";
+
+        if (comments.length === 0) {
+            commentsList.innerHTML =
+                "<p>Комментариев пока нет.</p>";
+
+            return;
+        }
+
+comments.forEach(comment => {
+
+    const commentElement =
+        document.createElement("div");
+
+    commentElement.className =
+        "comment-item";
+
+    commentElement.innerHTML = `
+        <div class="comment-header">
+            <strong>
+                ${comment.author}
+            </strong>
+
+            <button
+                type="button"
+                class="delete-comment"
+                data-comment-id="${comment.id}"
+            >
+                Удалить
+            </button>
+        </div>
+
+    <p>
+        ${comment.text}
+    </p>
+
+    <small>
+        ${new Date(comment.created_at).toLocaleString("ru-RU")}
+    </small>
+    `;
+
+    commentsList.appendChild(
+        commentElement
+    );
+});
+
+document
+    .querySelectorAll(".delete-comment")
+    .forEach(button => {
+
+        button.addEventListener(
+            "click",
+            async function() {
+
+                const commentId =
+                    this.dataset.commentId;
+
+                const response = await fetch(
+                    `/comments/${commentId}`,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+                if (!response.ok) {
+                    return;
+                }
+
+                await loadComments();
+            }
+        );
+    });
+
+    commentForm.addEventListener(
+        "submit",
+        async function(event) {
+
+            event.preventDefault();
+
+            const text =
+                document.getElementById(
+                    "comment-text"
+                ).value.trim();
+
+            if (!text) {
+                return;
+            }
+
+            const author =
+                prompt("Введите имя:");
+
+            if (!author) {
+                return;
+            }
+
+            const response = await fetch(
+                `/quotes/${quoteId}/comments`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        author: author,
+                        text: text
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            document.getElementById(
+                "comment-text"
+            ).value = "";
+
+            await loadComments();
+        }
+    );
+
+    loadComments();
+}
+
+const ratingStars = document.getElementById("rating-stars");
+const ratingInfo = document.getElementById("rating-info");
+
+if (ratingStars && ratingInfo) {
+
+    async function loadRating() {
+
+        const response = await fetch(
+            `/ratings/quotes/${quoteId}`
+        );
+
+        if (!response.ok) {
+            ratingInfo.textContent =
+                "Не удалось загрузить рейтинг.";
+
+            return;
+        }
+
+        const data = await response.json();
+
+        const average =
+            Number(data.average_rating || 0);
+
+        const votes =
+            Number(data.votes || 0);
+
+        ratingInfo.textContent =
+            `Рейтинг: ${average.toFixed(1)} / 5 (${votes} оценок)`;
+
+        const rounded =
+            Math.round(average);
+
+        document
+            .querySelectorAll(
+                "#rating-stars button"
+            )
+            .forEach(button => {
+
+                const value =
+                    Number(button.dataset.rating);
+
+                if (value <= rounded) {
+                    button.classList.add("active");
+                } else {
+                    button.classList.remove("active");
+                }
+            });
+    }
+
+    document
+        .querySelectorAll(
+            "#rating-stars button"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                async function() {
+
+                    const rating =
+                        Number(this.dataset.rating);
+
+                    const userId =
+                        prompt(
+                            "Введите ID пользователя:"
+                        );
+
+                    if (!userId) {
+                        return;
+                    }
+
+                    const response = await fetch(
+                        `/ratings/quotes/${quoteId}`,
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body: JSON.stringify({
+                                user_id:
+                                    Number(userId),
+
+                                rating: rating
+                            })
+                        }
+                    );
+
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    await loadRating();
+                }
+            );
+        });
+
+    loadRating();
+}

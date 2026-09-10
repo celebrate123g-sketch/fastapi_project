@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-    {{ quote.author }} — Quotes
+{{ quote.author }} — Quotes
 {% endblock %}
 
 {% block content %}
@@ -15,25 +15,19 @@
         ← Все цитаты
     </a>
 
-
     <article class="single-quote-card">
 
         <div class="single-quote-top">
-
             <span class="quote-category">
                 {{ quote.category }}
             </span>
-
         </div>
-
 
         <blockquote class="single-quote-text">
             “{{ quote.text }}”
         </blockquote>
 
-
         <div class="single-quote-author">
-
             <span class="author-label">
                 Автор
             </span>
@@ -41,50 +35,53 @@
             <strong>
                 {{ quote.author }}
             </strong>
-
         </div>
-
 
         <div class="single-quote-stats">
 
             <div class="quote-stat">
                 <span>★</span>
+
                 <strong>
                     {{ quote.average_rating|default(0) }}
                 </strong>
+
                 <small>
                     Рейтинг
                 </small>
             </div>
 
-
             <div class="quote-stat">
                 <span>❤️</span>
-                <strong>
+
+                <strong id="likes-count">
                     {{ quote.likes }}
                 </strong>
+
                 <small>
                     Лайки
                 </small>
             </div>
 
-
             <div class="quote-stat">
                 <span>👁</span>
+
                 <strong>
                     {{ quote.views }}
                 </strong>
+
                 <small>
                     Просмотры
                 </small>
             </div>
 
-
             <div class="quote-stat">
                 <span>💬</span>
-                <strong>
+
+                <strong id="comments-count">
                     {{ quote.comments_count }}
                 </strong>
+
                 <small>
                     Комментарии
                 </small>
@@ -92,37 +89,86 @@
 
         </div>
 
+        <div class="rating-section">
 
-        <div class="single-quote-actions">
+    <h3>Оценить цитату</h3>
 
-        <button
-            type="button"
-            class="action-button"
-            id="like-button"
-            data-quote-id="{{ quote.id }}"
-            data-liked="false"
-        >
-            ❤️ Нравится
-        </button>
+    <div class="rating-stars" id="rating-stars">
 
-        <button
-            type="button"
-            class="action-button"
-            id="favorite-button"
-            data-quote-id="{{ quote.id }}"
-            data-favorite="{{ 'true' if quote.favorite else 'false' }}"
-        >
-            {% if quote.favorite %}
-                ♥ В избранном
-            {% else %}
-                ♡ В избранное
-            {% endif %}
-        </button>
+        <button type="button" data-rating="1">★</button>
+        <button type="button" data-rating="2">★</button>
+        <button type="button" data-rating="3">★</button>
+        <button type="button" data-rating="4">★</button>
+        <button type="button" data-rating="5">★</button>
 
     </div>
 
-    </article>
+    <p id="rating-info">
+        Загрузка рейтинга...
+    </p>
 
 </div>
+
+        <div class="single-quote-actions">
+
+            <button
+                type="button"
+                class="action-button"
+                id="like-button"
+                data-quote-id="{{ quote.id }}"
+                data-liked="false"
+            >
+                ❤️ Нравится
+            </button>
+
+            <button
+                type="button"
+                class="action-button"
+                id="favorite-button"
+                data-quote-id="{{ quote.id }}"
+                data-favorite="{{ 'true' if quote.favorite else 'false' }}"
+            >
+                {% if quote.favorite %}
+                    ♥ В избранном
+                {% else %}
+                    ♡ В избранное
+                {% endif %}
+            </button>
+
+        </div>
+
+    </article>
+
+    <section class="comments-section">
+
+        <h2>
+            Комментарии
+        </h2>
+
+        <form id="comment-form">
+
+            <textarea
+                id="comment-text"
+                placeholder="Напишите комментарий..."
+                required
+            ></textarea>
+
+            <button type="submit">
+                Отправить
+            </button>
+
+        </form>
+
+        <div id="comments-list">
+            <p>Загрузка комментариев...</p>
+        </div>
+
+    </section>
+
+</div>
+
+<script>
+    const quoteId = {{ quote.id }};
+</script>
 
 {% endblock %}

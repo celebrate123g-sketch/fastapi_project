@@ -494,3 +494,134 @@ if (ratingStars && ratingInfo) {
 
     loadRating();
 }
+
+const registerForm =
+    document.getElementById("register-form");
+
+if (registerForm) {
+
+    registerForm.addEventListener(
+        "submit",
+        async function(event) {
+
+            event.preventDefault();
+
+            const username =
+                document.getElementById(
+                    "register-username"
+                ).value.trim();
+
+            const message =
+                document.getElementById(
+                    "register-message"
+                );
+
+            const response = await fetch(
+                "/users/",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        username: username
+                    })
+                }
+            );
+
+            const data =
+                await response.json();
+
+            if (!response.ok) {
+
+                message.textContent =
+                    data.detail ||
+                    "Ошибка регистрации.";
+
+                return;
+            }
+
+            localStorage.setItem(
+                "user_id",
+                data.id
+            );
+
+            localStorage.setItem(
+                "username",
+                data.username
+            );
+
+            window.location.href =
+                "/quotes-page";
+        }
+    );
+}
+
+
+const loginForm =
+    document.getElementById("login-form");
+
+if (loginForm) {
+
+    loginForm.addEventListener(
+        "submit",
+        async function(event) {
+
+            event.preventDefault();
+
+            const username =
+                document.getElementById(
+                    "login-username"
+                ).value.trim();
+
+            const message =
+                document.getElementById(
+                    "login-message"
+                );
+
+            const response = await fetch(
+                "/users/login",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        username: username
+                    })
+                }
+            );
+
+            const data =
+                await response.json();
+
+            if (!response.ok) {
+
+                message.textContent =
+                    data.detail ||
+                    "Ошибка входа.";
+
+                return;
+            }
+
+            localStorage.setItem(
+                "user_id",
+                data.id
+            );
+
+            localStorage.setItem(
+                "username",
+                data.username
+            );
+
+            window.location.href =
+                "/quotes-page";
+        }
+    );
+}

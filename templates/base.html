@@ -19,13 +19,11 @@
         {% endblock %}
     </title>
 
-    <!-- Основной CSS -->
     <link
         rel="stylesheet"
         href="{{ url_for('static', path='css/style.css') }}"
     >
 
-    <!-- Шрифт -->
     <link
         rel="preconnect"
         href="https://fonts.googleapis.com"
@@ -45,13 +43,9 @@
 
 <body>
 
-    <!-- ==================== HEADER ==================== -->
-
     <header class="site-header">
 
         <div class="header-container">
-
-            <!-- Логотип -->
 
             <a
                 href="/"
@@ -59,9 +53,6 @@
             >
                 Quotes
             </a>
-
-
-            <!-- Основная навигация -->
 
             <nav class="main-nav">
 
@@ -88,12 +79,7 @@
 
             </nav>
 
-
-            <!-- Правая часть -->
-
             <div class="header-actions">
-
-                <!-- Уведомления -->
 
                 <a
                     href="/notifications"
@@ -115,24 +101,32 @@
 
                 </a>
 
-
-                <!-- Профиль -->
+                <span
+                    id="user-info"
+                    class="profile-button"
+                ></span>
 
                 <a
-                    href="/profile"
+                    href="/users/login"
+                    id="login-link"
                     class="profile-button"
                 >
-                    Профиль
+                    Войти
                 </a>
+
+                <button
+                    id="logout-button"
+                    class="profile-button"
+                    style="display: none;"
+                >
+                    Выйти
+                </button>
 
             </div>
 
         </div>
 
     </header>
-
-
-    <!-- ==================== MAIN ==================== -->
 
     <main class="main-content">
 
@@ -146,9 +140,6 @@
 
     </main>
 
-
-    <!-- ==================== FOOTER ==================== -->
-
     <footer class="site-footer">
 
         <div class="footer-container">
@@ -161,13 +152,9 @@
 
     </footer>
 
-
-    <!-- Основной JavaScript -->
-
     <script
         src="{{ url_for('static', path='js/app.js') }}"
     ></script>
-
 
     {% block scripts %}
 

@@ -318,6 +318,60 @@ document.addEventListener(
 );
 
 
+        async function loadQuoteUserStatus() {
+
+            const userId =
+                localStorage.getItem(
+                    "user_id"
+                );
+
+            if (!userId) {
+                return;
+            }
+
+            const quoteId =
+                likeButton?.dataset.quoteId ||
+                favoriteButton?.dataset.quoteId;
+
+            if (!quoteId) {
+                return;
+            }
+
+            const response =
+                await fetch(
+                    `/quotes/${quoteId}/user-status?user_id=${userId}`
+                );
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data =
+                await response.json();
+
+            if (likeButton) {
+
+                likeButton.dataset.liked =
+                    String(data.liked);
+
+                likeButton.textContent =
+                    data.liked
+                        ? "💔 Убрать лайк"
+                        : "❤️ Нравится";
+            }
+
+            if (favoriteButton) {
+
+                favoriteButton.dataset.favorite =
+                    String(data.favorite);
+
+                favoriteButton.textContent =
+                    data.favorite
+                        ? "♥ В избранном"
+                        : "♡ В избранное";
+            }
+        }
+
 /* =========================
    COMMENTS
    ========================= */

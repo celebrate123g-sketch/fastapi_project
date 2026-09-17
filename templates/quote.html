@@ -126,13 +126,9 @@
                 class="action-button"
                 id="favorite-button"
                 data-quote-id="{{ quote.id }}"
-                data-favorite="{{ 'true' if quote.favorite else 'false' }}"
+                data-favorite="false"
             >
-                {% if quote.favorite %}
-                    ♥ В избранном
-                {% else %}
-                    ♡ В избранное
-                {% endif %}
+                ♡ В избранное
             </button>
 
         </div>

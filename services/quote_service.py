@@ -1,12 +1,15 @@
 from fastapi import HTTPException
 
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, select, insert, delete
 from sqlalchemy.orm import Session
 
 from database.models import (
     QuoteModel,
     QuoteViewModel,
-    QuoteRatingModel
+    QuoteRatingModel,
+    UserModel,
+    user_likes,
+    user_favorites
 )
 
 from schemas.quote import (
@@ -17,7 +20,6 @@ from schemas.quote import (
 from services.log_service import create_log
 from services.history_service import save_quote_history
 from services.duplicate_service import find_duplicate_quote
-from fastapi import HTTPException
 
 def attach_rating(
     db: Session,
@@ -550,64 +552,90 @@ def get_quotes_by_category(
 
 
 def get_favorite_quotes(
-    db: Session
+    db: Session,
+    user_id: int
 ):
+    user = (
+        db.query(UserModel)
+        .filter(
+            UserModel.id == user_id
+        )
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found."
+        )
 
     quotes = (
-
-        db.query(
-            QuoteModel
+        db.query(QuoteModel)
+        .join(
+            user_favorites,
+            user_favorites.c.quote_id == QuoteModel.id
         )
-
         .filter(
-
-            QuoteModel.favorite == True,
-
+            user_favorites.c.user_id == user_id,
             QuoteModel.is_deleted == False
-
         )
-
         .all()
-
     )
 
     return [
-
         attach_rating(
             db,
             quote
         )
-
         for quote in quotes
-
     ]
+
 
 def add_to_favorites(
     db: Session,
-    quote_id: int
+    quote_id: int,
+    user_id: int
 ):
+    user = (
+        db.query(UserModel)
+        .filter(
+            UserModel.id == user_id
+        )
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found."
+        )
 
     quote = get_quote_by_id(
         db,
         quote_id
     )
 
-    quote.favorite = True
+    existing = db.execute(
+        select(user_favorites).where(
+            user_favorites.c.user_id == user_id,
+            user_favorites.c.quote_id == quote_id
+        )
+    ).first()
 
-    db.commit()
+    if not existing:
+        db.execute(
+            insert(user_favorites).values(
+                user_id=user_id,
+                quote_id=quote_id
+            )
+        )
 
-    db.refresh(
-        quote
-    )
+        db.commit()
 
     create_log(
-
         db,
-
         "Added quote to favorites",
-
         quote.id
-
     )
 
     return attach_rating(
@@ -618,30 +646,41 @@ def add_to_favorites(
 
 def remove_from_favorites(
     db: Session,
-    quote_id: int
+    quote_id: int,
+    user_id: int
 ):
+    user = (
+        db.query(UserModel)
+        .filter(
+            UserModel.id == user_id
+        )
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found."
+        )
 
     quote = get_quote_by_id(
         db,
         quote_id
     )
 
-    quote.favorite = False
+    db.execute(
+        delete(user_favorites).where(
+            user_favorites.c.user_id == user_id,
+            user_favorites.c.quote_id == quote_id
+        )
+    )
 
     db.commit()
 
-    db.refresh(
-        quote
-    )
-
     create_log(
-
         db,
-
         "Removed quote from favorites",
-
         quote.id
-
     )
 
     return attach_rating(
@@ -652,30 +691,54 @@ def remove_from_favorites(
 
 def like_quote(
     db: Session,
-    quote_id: int
+    quote_id: int,
+    user_id: int
 ):
+    user = (
+        db.query(UserModel)
+        .filter(
+            UserModel.id == user_id
+        )
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found."
+        )
 
     quote = get_quote_by_id(
         db,
         quote_id
     )
 
-    quote.likes += 1
+    existing = db.execute(
+        select(user_likes).where(
+            user_likes.c.user_id == user_id,
+            user_likes.c.quote_id == quote_id
+        )
+    ).first()
 
-    db.commit()
+    if not existing:
+        db.execute(
+            insert(user_likes).values(
+                user_id=user_id,
+                quote_id=quote_id
+            )
+        )
 
-    db.refresh(
-        quote
-    )
+        quote.likes += 1
+        db.commit()
+
+        db.refresh(
+            quote
+        )
 
     create_log(
-
         db,
-
         "Liked quote",
-
         quote.id
-
     )
 
     return attach_rating(
@@ -686,74 +749,62 @@ def like_quote(
 
 def unlike_quote(
     db: Session,
-    quote_id: int
+    quote_id: int,
+    user_id: int
 ):
+    user = (
+        db.query(UserModel)
+        .filter(
+            UserModel.id == user_id
+        )
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found."
+        )
 
     quote = get_quote_by_id(
         db,
         quote_id
     )
 
-    if quote.likes > 0:
+    existing = db.execute(
+        select(user_likes).where(
+            user_likes.c.user_id == user_id,
+            user_likes.c.quote_id == quote_id
+        )
+    ).first()
 
-        quote.likes -= 1
+    if existing:
+        db.execute(
+            delete(user_likes).where(
+                user_likes.c.user_id == user_id,
+                user_likes.c.quote_id == quote_id
+            )
+        )
 
-    db.commit()
+        if quote.likes > 0:
+            quote.likes -= 1
 
-    db.refresh(
-        quote
-    )
+        db.commit()
+
+        db.refresh(
+            quote
+        )
 
     create_log(
-
         db,
-
         "Removed like from quote",
-
         quote.id
-
     )
 
     return attach_rating(
         db,
         quote
     )
-
-def get_popular_quotes(
-    db: Session
-):
-
-    quotes = (
-
-        db.query(
-            QuoteModel
-        )
-
-        .filter(
-            QuoteModel.is_deleted == False
-        )
-
-        .order_by(
-            desc(
-                QuoteModel.likes
-            )
-        )
-
-        .all()
-
-    )
-
-    return [
-
-        attach_rating(
-            db,
-            quote
-        )
-
-        for quote in quotes
-
-    ]
-
 
 def get_most_viewed_quotes(
     db: Session

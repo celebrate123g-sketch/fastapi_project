@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}
+Избранное — Quotes
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+
+    <h1>
+        Избранное
+    </h1>
+
+</div>
+
+<div id="favorites-list">
+
+    <p>
+        Загрузка...
+    </p>
+
+</div>
+
+<script>
+
+document.addEventListener(
+    "DOMContentLoaded",
+    async function() {
+
+        const userId =
+            localStorage.getItem(
+                "user_id"
+            );
+
+        const list =
+            document.getElementById(
+                "favorites-list"
+            );
+
+        if (!userId) {
+
+            window.location.href =
+                "/users/login";
+
+            return;
+        }
+
+        const response =
+            await fetch(
+                `/quotes/favorites?user_id=${userId}`
+            );
+
+        if (!response.ok) {
+
+            list.innerHTML =
+                "<p>Не удалось загрузить избранное.</p>";
+
+            return;
+        }
+
+        const quotes =
+            await response.json();
+
+        list.innerHTML = "";
+
+        if (quotes.length === 0) {
+
+            list.innerHTML =
+                "<p>В избранном пока нет цитат.</p>";
+
+            return;
+        }
+
+        quotes.forEach(
+            quote => {
+
+                const element =
+                    document.createElement(
+                        "article"
+                    );
+
+                element.className =
+                    "quote-card";
+
+                element.innerHTML = `
+                    <span class="quote-category">
+                        ${quote.category}
+                    </span>
+
+                    <blockquote>
+                        “${quote.text}”
+                    </blockquote>
+
+                    <strong>
+                        ${quote.author}
+                    </strong>
+
+                    <a
+                        href="/quotes-page/${quote.id}"
+                    >
+                        Открыть цитату
+                    </a>
+                `;
+
+                list.appendChild(
+                    element
+                );
+
+            }
+        );
+
+    }
+);
+
+</script>
+
+{% endblock %}

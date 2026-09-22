@@ -374,3 +374,14 @@ def quote_page(
             "quote": quote
         }
     )
+
+@router.get("/favorites")
+def favorites_page(
+    request: Request
+):
+    return templates.TemplateResponse(
+        "favorites.html",
+        {
+            "request": request
+        }
+    )

@@ -555,41 +555,19 @@ def get_favorite_quotes(
     db: Session,
     user_id: int
 ):
-    user = (
-        db.query(UserModel)
-        .filter(
-            UserModel.id == user_id
-        )
-        .first()
-    )
+    from database.models import user_favorites
 
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found."
-        )
-
-    quotes = (
+    return (
         db.query(QuoteModel)
         .join(
             user_favorites,
-            user_favorites.c.quote_id == QuoteModel.id
+            QuoteModel.id == user_favorites.c.quote_id
         )
         .filter(
-            user_favorites.c.user_id == user_id,
-            QuoteModel.is_deleted == False
+            user_favorites.c.user_id == user_id
         )
         .all()
     )
-
-    return [
-        attach_rating(
-            db,
-            quote
-        )
-        for quote in quotes
-    ]
-
 
 def add_to_favorites(
     db: Session,

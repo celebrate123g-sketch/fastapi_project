@@ -672,6 +672,8 @@ def like_quote(
     quote_id: int,
     user_id: int
 ):
+    from database.models import user_likes, UserModel
+
     user = (
         db.query(UserModel)
         .filter(
@@ -680,44 +682,53 @@ def like_quote(
         .first()
     )
 
-    if not user:
+    if user is None:
         raise HTTPException(
             status_code=404,
             detail="User not found."
         )
 
-    quote = get_quote_by_id(
-        db,
-        quote_id
+    quote = (
+        db.query(QuoteModel)
+        .filter(
+            QuoteModel.id == quote_id,
+            QuoteModel.is_deleted == False
+        )
+        .first()
     )
 
-    existing = db.execute(
-        select(user_likes).where(
+    if quote is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Quote not found."
+        )
+
+    existing_like = (
+        db.query(user_likes)
+        .filter(
             user_likes.c.user_id == user_id,
             user_likes.c.quote_id == quote_id
         )
-    ).first()
+        .first()
+    )
 
-    if not existing:
-        db.execute(
-            insert(user_likes).values(
-                user_id=user_id,
-                quote_id=quote_id
-            )
-        )
-
-        quote.likes += 1
-        db.commit()
-
-        db.refresh(
+    if existing_like:
+        return attach_rating(
+            db,
             quote
         )
 
-    create_log(
-        db,
-        "Liked quote",
-        quote.id
+    db.execute(
+        user_likes.insert().values(
+            user_id=user_id,
+            quote_id=quote_id
+        )
     )
+
+    quote.likes += 1
+
+    db.commit()
+    db.refresh(quote)
 
     return attach_rating(
         db,
@@ -730,54 +741,51 @@ def unlike_quote(
     quote_id: int,
     user_id: int
 ):
-    user = (
-        db.query(UserModel)
+    from database.models import user_likes
+
+    quote = (
+        db.query(QuoteModel)
         .filter(
-            UserModel.id == user_id
+            QuoteModel.id == quote_id,
+            QuoteModel.is_deleted == False
         )
         .first()
     )
 
-    if not user:
+    if quote is None:
         raise HTTPException(
             status_code=404,
-            detail="User not found."
+            detail="Quote not found."
         )
 
-    quote = get_quote_by_id(
-        db,
-        quote_id
-    )
-
-    existing = db.execute(
-        select(user_likes).where(
+    existing_like = (
+        db.query(user_likes)
+        .filter(
             user_likes.c.user_id == user_id,
             user_likes.c.quote_id == quote_id
         )
-    ).first()
+        .first()
+    )
 
-    if existing:
-        db.execute(
-            delete(user_likes).where(
-                user_likes.c.user_id == user_id,
-                user_likes.c.quote_id == quote_id
-            )
-        )
-
-        if quote.likes > 0:
-            quote.likes -= 1
-
-        db.commit()
-
-        db.refresh(
+    if not existing_like:
+        return attach_rating(
+            db,
             quote
         )
 
-    create_log(
-        db,
-        "Removed like from quote",
-        quote.id
+    db.execute(
+        user_likes.delete()
+        .where(
+            user_likes.c.user_id == user_id,
+            user_likes.c.quote_id == quote_id
+        )
     )
+
+    if quote.likes > 0:
+        quote.likes -= 1
+
+    db.commit()
+    db.refresh(quote)
 
     return attach_rating(
         db,

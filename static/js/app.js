@@ -64,45 +64,73 @@ async function updateNotificationCount() {
    FAVORITE BUTTONS
    ========================= */
 
-function initializeFavoriteButtons() {
+f        if (favoriteButton) {
 
-    const buttons = document.querySelectorAll(
-        ".favorite-button"
-    );
-
-    buttons.forEach(
-        (button) => {
-
-            button.addEventListener(
+            favoriteButton.addEventListener(
                 "click",
-                () => {
+                async () => {
 
                     const userId =
-                        localStorage.getItem("user_id");
+                        localStorage.getItem(
+                            "user_id"
+                        );
 
                     if (!userId) {
+
                         window.location.href =
                             "/users/login";
 
                         return;
                     }
 
-                    const active =
-                        button.classList.toggle(
-                            "is-active"
-                        );
+                    const quoteId =
+                        favoriteButton.dataset.quoteId;
 
-                    button.textContent =
-                        active
-                            ? "♥"
-                            : "♡";
+                    const favorite =
+                        favoriteButton.dataset.favorite ===
+                        "true";
+
+                    const action =
+                        favorite
+                            ? "unfavorite"
+                            : "favorite";
+
+                    try {
+
+                        const response =
+                            await fetch(
+                                `/quotes/${quoteId}/${action}?user_id=${userId}`,
+                                {
+                                    method: "PUT"
+                                }
+                            );
+
+                        if (!response.ok) {
+
+                            throw new Error(
+                                "Ошибка при изменении избранного"
+                            );
+
+                        }
+
+                        favoriteButton.dataset.favorite =
+                            String(!favorite);
+
+                        favoriteButton.textContent =
+                            !favorite
+                                ? "♥ В избранном"
+                                : "♡ В избранное";
+
+                    } catch (error) {
+
+                        console.error(error);
+
+                    }
 
                 }
             );
 
         }
-    );
-}
 
 
 /* =========================
@@ -129,10 +157,87 @@ document.addEventListener(
     "DOMContentLoaded",
     () => {
 
-        const likeButton =
-            document.getElementById(
-                "like-button"
-            );
+if (likeButton) {
+
+    likeButton.addEventListener(
+        "click",
+        async () => {
+
+            const userId =
+                localStorage.getItem(
+                    "user_id"
+                );
+
+            if (!userId) {
+
+                window.location.href =
+                    "/users/login";
+
+                return;
+            }
+
+            const quoteId =
+                likeButton.dataset.quoteId;
+
+            const liked =
+                likeButton.dataset.liked ===
+                "true";
+
+            const action =
+                liked
+                    ? "unlike"
+                    : "like";
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/quotes/${quoteId}/${action}?user_id=${userId}`,
+                        {
+                            method: "PUT"
+                        }
+                    );
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "Ошибка при изменении лайка"
+                    );
+                }
+
+                const quote =
+                    await response.json();
+
+                likeButton.dataset.liked =
+                    String(!liked);
+
+                likeButton.textContent =
+                    !liked
+                        ? "💔 Убрать лайк"
+                        : "❤️ Нравится";
+
+                const likesElement =
+                    document.getElementById(
+                        "likes-count"
+                    );
+
+                if (likesElement) {
+
+                    likesElement.textContent =
+                        quote.likes;
+
+                }
+
+            } catch (error) {
+
+                console.error(error);
+
+            }
+
+        }
+    );
+
+}
 
         const favoriteButton =
             document.getElementById(

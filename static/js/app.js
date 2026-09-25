@@ -831,10 +831,63 @@ document.addEventListener(
             );
 
         loadRating();
+        loadUserRating();
 
     }
 );
 
+async function loadUserRating() {
+
+    const userId =
+        localStorage.getItem(
+            "user_id"
+        );
+
+    if (!userId) {
+        return;
+    }
+
+    const response =
+        await fetch(
+            `/ratings/quotes/${quoteId}/user?user_id=${userId}`
+        );
+
+    if (!response.ok) {
+        return;
+    }
+
+    const data =
+        await response.json();
+
+    document
+        .querySelectorAll(
+            "#rating-stars button"
+        )
+        .forEach(
+            button => {
+
+                const value =
+                    Number(
+                        button.dataset.rating
+                    );
+
+                if (value <= data.rating) {
+
+                    button.classList.add(
+                        "active"
+                    );
+
+                } else {
+
+                    button.classList.remove(
+                        "active"
+                    );
+
+                }
+
+            }
+        );
+}
 
 /* =========================
    REGISTRATION

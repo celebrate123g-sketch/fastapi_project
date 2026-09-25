@@ -24,3 +24,9 @@ class UserLogin(BaseModel):
         min_length=2,
         max_length=100
     )
+
+class UserUpdate(BaseModel):
+    username: str = Field(
+        min_length=2,
+        max_length=100
+    )

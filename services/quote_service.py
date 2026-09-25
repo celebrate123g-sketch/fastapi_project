@@ -574,6 +574,8 @@ def add_to_favorites(
     quote_id: int,
     user_id: int
 ):
+    from database.models import user_favorites, UserModel
+
     user = (
         db.query(UserModel)
         .filter(
@@ -582,39 +584,50 @@ def add_to_favorites(
         .first()
     )
 
-    if not user:
+    if user is None:
         raise HTTPException(
             status_code=404,
             detail="User not found."
         )
 
-    quote = get_quote_by_id(
-        db,
-        quote_id
+    quote = (
+        db.query(QuoteModel)
+        .filter(
+            QuoteModel.id == quote_id,
+            QuoteModel.is_deleted == False
+        )
+        .first()
     )
 
-    existing = db.execute(
-        select(user_favorites).where(
+    if quote is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Quote not found."
+        )
+
+    existing_favorite = (
+        db.query(user_favorites)
+        .filter(
             user_favorites.c.user_id == user_id,
             user_favorites.c.quote_id == quote_id
         )
-    ).first()
+        .first()
+    )
 
-    if not existing:
-        db.execute(
-            insert(user_favorites).values(
-                user_id=user_id,
-                quote_id=quote_id
-            )
+    if existing_favorite:
+        return attach_rating(
+            db,
+            quote
         )
 
-        db.commit()
-
-    create_log(
-        db,
-        "Added quote to favorites",
-        quote.id
+    db.execute(
+        user_favorites.insert().values(
+            user_id=user_id,
+            quote_id=quote_id
+        )
     )
+
+    db.commit()
 
     return attach_rating(
         db,
@@ -627,39 +640,47 @@ def remove_from_favorites(
     quote_id: int,
     user_id: int
 ):
-    user = (
-        db.query(UserModel)
+    from database.models import user_favorites
+
+    quote = (
+        db.query(QuoteModel)
         .filter(
-            UserModel.id == user_id
+            QuoteModel.id == quote_id,
+            QuoteModel.is_deleted == False
         )
         .first()
     )
 
-    if not user:
+    if quote is None:
         raise HTTPException(
             status_code=404,
-            detail="User not found."
+            detail="Quote not found."
         )
 
-    quote = get_quote_by_id(
-        db,
-        quote_id
+    existing_favorite = (
+        db.query(user_favorites)
+        .filter(
+            user_favorites.c.user_id == user_id,
+            user_favorites.c.quote_id == quote_id
+        )
+        .first()
     )
 
+    if not existing_favorite:
+        return attach_rating(
+            db,
+            quote
+        )
+
     db.execute(
-        delete(user_favorites).where(
+        user_favorites.delete()
+        .where(
             user_favorites.c.user_id == user_id,
             user_favorites.c.quote_id == quote_id
         )
     )
 
     db.commit()
-
-    create_log(
-        db,
-        "Removed quote from favorites",
-        quote.id
-    )
 
     return attach_rating(
         db,

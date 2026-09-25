@@ -80,3 +80,27 @@ def top_rated(
         limit,
         min_votes
     )
+
+@router.get("/ratings/quotes/{quote_id}/user")
+def get_user_rating(
+    quote_id: int,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    rating = (
+        db.query(QuoteRatingModel)
+        .filter(
+            QuoteRatingModel.quote_id == quote_id,
+            QuoteRatingModel.user_id == user_id
+        )
+        .first()
+    )
+
+    if rating is None:
+        return {
+            "rating": 0
+        }
+
+    return {
+        "rating": rating.rating
+    }

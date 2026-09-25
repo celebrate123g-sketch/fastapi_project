@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}
+Профиль — Quotes
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+
+    <h1>
+        Профиль
+    </h1>
+
+</div>
+
+<div id="profile">
+
+    <p>
+        Загрузка...
+    </p>
+
+</div>
+
+<script>
+
+document.addEventListener(
+    "DOMContentLoaded",
+    async function() {
+
+        const userId =
+            localStorage.getItem(
+                "user_id"
+            );
+
+        const profile =
+            document.getElementById(
+                "profile"
+            );
+
+        if (!userId) {
+
+            window.location.href =
+                "/users/login";
+
+            return;
+        }
+
+        const response =
+            await fetch(
+                `/users/profile/data?user_id=${userId}`
+            );
+
+        if (!response.ok) {
+
+            profile.innerHTML =
+                "<p>Не удалось загрузить профиль.</p>";
+
+            return;
+        }
+
+        const user =
+            await response.json();
+
+        const date =
+            new Date(
+                user.created_at
+            ).toLocaleDateString(
+                "ru-RU"
+            );
+
+        profile.innerHTML = `
+
+            <div class="profile-card">
+
+                <h2>
+                    ${user.username}
+                </h2>
+
+                <p>
+                    ID пользователя: ${user.id}
+                </p>
+
+                <p>
+                    Регистрация: ${date}
+                </p>
+
+                <div class="profile-edit">
+
+            <input
+                type="text"
+                id="username-input"
+                value="${user.username}"
+            >
+
+            <button
+                type="button"
+                id="save-profile"
+            >
+                Сохранить
+            </button>
+
+            <p id="profile-message"></p>
+
+        </div>
+
+                <div class="profile-stats">
+
+                    <div>
+                        <strong>
+                            ${user.likes_count}
+                        </strong>
+
+                        <span>
+                            Лайков
+                        </span>
+                    </div>
+
+                    <div>
+                        <strong>
+                            ${user.favorites_count}
+                        </strong>
+
+                        <span>
+                            Избранных
+                        </span>
+                    </div>
+
+                    <div>
+                        <strong>
+                            ${user.ratings_count}
+                        </strong>
+
+                        <span>
+                            Оценок
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        `;
+    }
+);
+
+</script>
+
+{% endblock %}

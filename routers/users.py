@@ -16,7 +16,7 @@ from schemas.user import (
     UserResponse,
     UserUpdate
 )
-
+import bcrypt
 from fastapi.templating import Jinja2Templates
 
 
@@ -58,6 +58,10 @@ def register_page(
     "/",
     response_model=UserResponse
 )
+@router.post(
+    "/",
+    response_model=UserResponse
+)
 def create_user(
     user: UserCreate,
     db: Session = Depends(get_db)
@@ -76,8 +80,14 @@ def create_user(
             detail="Username already exists."
         )
 
+    password_hash = bcrypt.hashpw(
+        user.password.encode(),
+        bcrypt.gensalt()
+    ).decode()
+
     new_user = UserModel(
-        username=user.username
+        username=user.username,
+        password_hash=password_hash
     )
 
     db.add(new_user)
@@ -107,6 +117,23 @@ def login(
         raise HTTPException(
             status_code=404,
             detail="User not found."
+        )
+
+    if not existing_user.password_hash:
+        raise HTTPException(
+            status_code=400,
+            detail="This account does not have a password."
+        )
+
+    password_correct = bcrypt.checkpw(
+        user.password.encode(),
+        existing_user.password_hash.encode()
+    )
+
+    if not password_correct:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect password."
         )
 
     return existing_user

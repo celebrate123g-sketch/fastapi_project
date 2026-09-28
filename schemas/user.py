@@ -9,6 +9,30 @@ class UserCreate(BaseModel):
         max_length=100
     )
 
+    password: str = Field(
+        min_length=6,
+        max_length=100
+    )
+
+
+class UserLogin(BaseModel):
+    username: str = Field(
+        min_length=2,
+        max_length=100
+    )
+
+    password: str = Field(
+        min_length=6,
+        max_length=100
+    )
+
+
+class UserUpdate(BaseModel):
+    username: str = Field(
+        min_length=2,
+        max_length=100
+    )
+
 
 class UserResponse(BaseModel):
     id: int
@@ -17,16 +41,4 @@ class UserResponse(BaseModel):
 
     model_config = ConfigDict(
         from_attributes=True
-    )
-
-class UserLogin(BaseModel):
-    username: str = Field(
-        min_length=2,
-        max_length=100
-    )
-
-class UserUpdate(BaseModel):
-    username: str = Field(
-        min_length=2,
-        max_length=100
     )

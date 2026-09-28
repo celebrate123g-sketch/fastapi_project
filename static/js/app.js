@@ -917,6 +917,11 @@ document.addEventListener(
                         "register-username"
                     ).value.trim();
 
+                const password =
+                    document.getElementById(
+                        "register-password"
+                    ).value;
+
                 const message =
                     document.getElementById(
                         "register-message"

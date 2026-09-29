@@ -957,13 +957,18 @@ document.addEventListener(
                 }
 
                 localStorage.setItem(
+                    "access_token",
+                    data.access_token
+                );
+
+                localStorage.setItem(
                     "user_id",
-                    data.id
+                    data.user.id
                 );
 
                 localStorage.setItem(
                     "username",
-                    data.username
+                    data.user.username
                 );
 
                 window.location.href =
@@ -975,6 +980,12 @@ document.addEventListener(
     }
 );
 
+
+function getAccessToken() {
+    return localStorage.getItem(
+        "access_token"
+    );
+}
 
 /* =========================
    LOGIN

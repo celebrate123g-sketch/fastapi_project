@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-
+from config.auth import create_access_token
 from database.database import get_db
 from database.models import UserModel
 from database.models import (
@@ -30,16 +30,51 @@ templates = Jinja2Templates(
 )
 
 
-@router.get("/login")
-def login_page(
-    request: Request
+@router.post("/login")
+def login(
+    user: UserLogin,
+    db: Session = Depends(get_db)
 ):
-    return templates.TemplateResponse(
-        "login.html",
-        {
-            "request": request
-        }
+    existing_user = (
+        db.query(UserModel)
+        .filter(
+            UserModel.username == user.username
+        )
+        .first()
     )
+
+    if not existing_user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found."
+        )
+
+    if not existing_user.password_hash:
+        raise HTTPException(
+            status_code=400,
+            detail="This account does not have a password."
+        )
+
+    password_correct = bcrypt.checkpw(
+        user.password.encode(),
+        existing_user.password_hash.encode()
+    )
+
+    if not password_correct:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect password."
+        )
+
+    token = create_access_token(
+        existing_user.id
+    )
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": existing_user
+    }
 
 
 @router.get("/register")
@@ -65,6 +100,7 @@ def register_page(
 def create_user(
     user: UserCreate,
     db: Session = Depends(get_db)
+
 ):
     existing_user = (
         db.query(UserModel)
@@ -94,7 +130,16 @@ def create_user(
     db.commit()
     db.refresh(new_user)
 
-    return new_user
+    token = create_access_token(
+        new_user.id
+    )
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": new_user
+    }
+
 
 
 @router.post(

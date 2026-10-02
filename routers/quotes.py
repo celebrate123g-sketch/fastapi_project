@@ -36,6 +36,9 @@ from services.quote_service import (
     count_search_quotes,
 )
 
+from dependencies.auth import get_current_user
+from database.models import UserModel
+
 
 templates = Jinja2Templates(
     directory="templates"
@@ -134,26 +137,26 @@ def favorites(
 @router.put("/quotes/{quote_id}/favorite")
 def favorite(
     quote_id: int,
-    user_id: int,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return add_to_favorites(
         db,
         quote_id,
-        user_id
+        current_user.id
     )
 
 
 @router.put("/quotes/{quote_id}/unfavorite")
 def unfavorite(
     quote_id: int,
-    user_id: int,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return remove_from_favorites(
         db,
         quote_id,
-        user_id
+        current_user.id
     )
 
 @router.get("/quotes/{quote_id}/user-status")
@@ -193,26 +196,26 @@ def quote_user_status(
 @router.put("/quotes/{quote_id}/like")
 def like(
     quote_id: int,
-    user_id: int,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return like_quote(
         db,
         quote_id,
-        user_id
+        current_user.id
     )
 
 
 @router.put("/quotes/{quote_id}/unlike")
 def unlike(
     quote_id: int,
-    user_id: int,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return unlike_quote(
         db,
         quote_id,
-        user_id
+        current_user.id
     )
 
 

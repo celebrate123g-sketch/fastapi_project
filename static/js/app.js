@@ -987,6 +987,19 @@ function getAccessToken() {
     );
 }
 
+function getAuthHeaders() {
+
+    const token =
+        localStorage.getItem(
+            "access_token"
+        );
+
+    return {
+        "Authorization":
+            `Bearer ${token}`
+    };
+}
+
 /* =========================
    LOGIN
    ========================= */
@@ -1068,6 +1081,37 @@ document.addEventListener(
     }
 );
 
+function logout() {
+
+    localStorage.removeItem(
+        "access_token"
+    );
+
+    localStorage.removeItem(
+        "user_id"
+    );
+
+    localStorage.removeItem(
+        "username"
+    );
+
+    window.location.href =
+        "/";
+}
+
+const logoutButton =
+    document.getElementById(
+        "logout-button"
+    );
+
+if (logoutButton) {
+
+    logoutButton.addEventListener(
+        "click",
+        logout
+    );
+
+}
 
 /* =========================
    USER

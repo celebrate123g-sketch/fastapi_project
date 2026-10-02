@@ -18,7 +18,7 @@ from schemas.user import (
 )
 import bcrypt
 from fastapi.templating import Jinja2Templates
-
+from dependencies.auth import get_current_user
 
 router = APIRouter(
     prefix="/users",
@@ -232,27 +232,13 @@ def profile_page(
 
 @router.get("/profile/data")
 def profile_data(
-    user_id: int,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    user = (
-        db.query(UserModel)
-        .filter(
-            UserModel.id == user_id
-        )
-        .first()
-    )
-
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found."
-        )
-
     likes_count = (
         db.query(user_likes)
         .filter(
-            user_likes.c.user_id == user_id
+            user_likes.c.user_id == current_user.id
         )
         .count()
     )
@@ -260,7 +246,7 @@ def profile_data(
     favorites_count = (
         db.query(user_favorites)
         .filter(
-            user_favorites.c.user_id == user_id
+            user_favorites.c.user_id == current_user.id
         )
         .count()
     )
@@ -268,18 +254,27 @@ def profile_data(
     ratings_count = (
         db.query(QuoteRatingModel)
         .filter(
-            QuoteRatingModel.user_id == user_id
+            QuoteRatingModel.user_id == current_user.id
         )
         .count()
     )
 
     return {
-        "id": user.id,
-        "username": user.username,
-        "created_at": user.created_at,
+        "id": current_user.id,
+        "username": current_user.username,
+        "created_at": current_user.created_at,
         "likes_count": likes_count,
         "favorites_count": favorites_count,
         "ratings_count": ratings_count
+
+    const response =
+        await fetch(
+            "/users/profile/data",
+            {
+                headers: getAuthHeaders()
+            }
+        );
+
     }
 
 @router.put("/profile")

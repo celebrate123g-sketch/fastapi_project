@@ -38,7 +38,9 @@ from services.quote_service import (
 
 from dependencies.auth import get_current_user
 from database.models import UserModel
-
+from fastapi import Depends
+from dependencies.auth import get_current_user
+from database.models import user_likes, user_favorites
 
 templates = Jinja2Templates(
     directory="templates"
@@ -125,12 +127,12 @@ def category_quotes(
 
 @router.get("/quotes/favorites")
 def favorites(
-    user_id: int,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return get_favorite_quotes(
         db,
-        user_id
+        current_user.id
     )
 
 
@@ -159,39 +161,6 @@ def unfavorite(
         current_user.id
     )
 
-@router.get("/quotes/{quote_id}/user-status")
-def quote_user_status(
-    quote_id: int,
-    user_id: int,
-    db: Session = Depends(get_db)
-):
-    from database.models import user_likes, user_favorites
-
-    liked = (
-        db.query(user_likes)
-        .filter(
-            user_likes.c.user_id == user_id,
-            user_likes.c.quote_id == quote_id
-        )
-        .first()
-        is not None
-    )
-
-    favorite = (
-        db.query(user_favorites)
-        .filter(
-            user_favorites.c.user_id == user_id,
-            user_favorites.c.quote_id == quote_id
-        )
-        .first()
-        is not None
-    )
-
-    return {
-        "liked": liked,
-        "favorite": favorite
-    }
-
 
 @router.put("/quotes/{quote_id}/like")
 def like(
@@ -217,6 +186,52 @@ def unlike(
         quote_id,
         current_user.id
     )
+
+
+@router.put("/quotes/{quote_id}/unfavorite")
+def unfavorite(
+    quote_id: int,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return remove_from_favorites(
+        db,
+        quote_id,
+        current_user.id
+    )
+
+@router.get("/quotes/{quote_id}/user-status")
+def quote_user_status(
+    quote_id: int,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from database.models import user_likes, user_favorites
+
+    liked = (
+        db.query(user_likes)
+        .filter(
+            user_likes.c.user_id == current_user.id,
+            user_likes.c.quote_id == quote_id
+        )
+        .first()
+        is not None
+    )
+
+    favorite = (
+        db.query(user_favorites)
+        .filter(
+            user_favorites.c.user_id == current_user.id,
+            user_favorites.c.quote_id == quote_id
+        )
+        .first()
+        is not None
+    )
+
+    return {
+        "liked": liked,
+        "favorite": favorite
+    }
 
 
 @router.get("/quotes/popular")

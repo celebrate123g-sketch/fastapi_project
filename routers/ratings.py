@@ -19,6 +19,10 @@ from services.rating_service import (
     get_quote_rating,
     get_top_rated_quotes
 )
+from fastapi import Depends
+from database.models import UserModel
+from dependencies.auth import get_current_user
+
 
 router = APIRouter(
     prefix="/ratings",
@@ -84,14 +88,14 @@ def top_rated(
 @router.get("/ratings/quotes/{quote_id}/user")
 def get_user_rating(
     quote_id: int,
-    user_id: int,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     rating = (
         db.query(QuoteRatingModel)
         .filter(
             QuoteRatingModel.quote_id == quote_id,
-            QuoteRatingModel.user_id == user_id
+            QuoteRatingModel.user_id == current_user.id
         )
         .first()
     )

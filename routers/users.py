@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from fastapi.templating import Jinja2Templates
+
+import bcrypt
+
 from config.auth import create_access_token
 from database.database import get_db
-from database.models import UserModel
 from database.models import (
     UserModel,
     user_likes,
@@ -16,9 +18,8 @@ from schemas.user import (
     UserResponse,
     UserUpdate
 )
-import bcrypt
-from fastapi.templating import Jinja2Templates
 from dependencies.auth import get_current_user
+
 
 router = APIRouter(
     prefix="/users",
@@ -28,6 +29,62 @@ router = APIRouter(
 templates = Jinja2Templates(
     directory="templates"
 )
+
+
+@router.post("/")
+def create_user(
+    user: UserCreate,
+    db: Session = Depends(get_db)
+):
+    existing_user = (
+        db.query(UserModel)
+        .filter(
+            UserModel.username == user.username
+        )
+        .first()
+    )
+
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Username already exists."
+        )
+
+    password_hash = bcrypt.hashpw(
+        user.password.encode(),
+        bcrypt.gensalt()
+    ).decode()
+
+    new_user = UserModel(
+        username=user.username,
+        password_hash=password_hash
+    )
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    token = create_access_token(
+        new_user.id
+    )
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": new_user
+    }
+
+
+@router.get("/login")
+def login_page(
+    request: Request
+):
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request
+        }
+    )
 
 
 @router.post("/login")
@@ -89,101 +146,6 @@ def register_page(
     )
 
 
-@router.post(
-    "/",
-    response_model=UserResponse
-)
-@router.post(
-    "/",
-    response_model=UserResponse
-)
-def create_user(
-    user: UserCreate,
-    db: Session = Depends(get_db)
-
-):
-    existing_user = (
-        db.query(UserModel)
-        .filter(
-            UserModel.username == user.username
-        )
-        .first()
-    )
-
-    if existing_user:
-        raise HTTPException(
-            status_code=400,
-            detail="Username already exists."
-        )
-
-    password_hash = bcrypt.hashpw(
-        user.password.encode(),
-        bcrypt.gensalt()
-    ).decode()
-
-    new_user = UserModel(
-        username=user.username,
-        password_hash=password_hash
-    )
-
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    token = create_access_token(
-        new_user.id
-    )
-
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "user": new_user
-    }
-
-
-
-@router.post(
-    "/login",
-    response_model=UserResponse
-)
-def login(
-    user: UserLogin,
-    db: Session = Depends(get_db)
-):
-    existing_user = (
-        db.query(UserModel)
-        .filter(
-            UserModel.username == user.username
-        )
-        .first()
-    )
-
-    if not existing_user:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found."
-        )
-
-    if not existing_user.password_hash:
-        raise HTTPException(
-            status_code=400,
-            detail="This account does not have a password."
-        )
-
-    password_correct = bcrypt.checkpw(
-        user.password.encode(),
-        existing_user.password_hash.encode()
-    )
-
-    if not password_correct:
-        raise HTTPException(
-            status_code=401,
-            detail="Incorrect password."
-        )
-
-    return existing_user
-
-
 @router.get(
     "/",
     response_model=list[UserResponse]
@@ -217,6 +179,7 @@ def get_user(
         )
 
     return user
+
 
 @router.get("/profile")
 def profile_page(
@@ -266,42 +229,20 @@ def profile_data(
         "likes_count": likes_count,
         "favorites_count": favorites_count,
         "ratings_count": ratings_count
-
-    const response =
-        await fetch(
-            "/users/profile/data",
-            {
-                headers: getAuthHeaders()
-            }
-        );
-
     }
+
 
 @router.put("/profile")
 def update_profile(
-    user_id: int,
     user: UserUpdate,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    existing_user = (
-        db.query(UserModel)
-        .filter(
-            UserModel.id == user_id
-        )
-        .first()
-    )
-
-    if not existing_user:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found."
-        )
-
     username_exists = (
         db.query(UserModel)
         .filter(
             UserModel.username == user.username,
-            UserModel.id != user_id
+            UserModel.id != current_user.id
         )
         .first()
     )
@@ -312,9 +253,9 @@ def update_profile(
             detail="Username already exists."
         )
 
-    existing_user.username = user.username
+    current_user.username = user.username
 
     db.commit()
-    db.refresh(existing_user)
+    db.refresh(current_user)
 
-    return existing_user
+    return current_user

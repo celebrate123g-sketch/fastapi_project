@@ -28,9 +28,9 @@ document.addEventListener(
     "DOMContentLoaded",
     async function() {
 
-        const userId =
+        const token =
             localStorage.getItem(
-                "user_id"
+                "access_token"
             );
 
         const profile =
@@ -38,7 +38,7 @@ document.addEventListener(
                 "profile"
             );
 
-        if (!userId) {
+        if (!token) {
 
             window.location.href =
                 "/users/login";
@@ -46,10 +46,12 @@ document.addEventListener(
             return;
         }
 
-        const response =
-            await fetch(
-                `/users/profile/data?user_id=${userId}`
-            );
+        const response = await fetch(
+            "/users/profile/data",
+            {
+                headers: getAuthHeaders()
+            }
+        );
 
         if (!response.ok) {
 
@@ -87,22 +89,22 @@ document.addEventListener(
 
                 <div class="profile-edit">
 
-            <input
-                type="text"
-                id="username-input"
-                value="${user.username}"
-            >
+                    <input
+                        type="text"
+                        id="username-input"
+                        value="${user.username}"
+                    >
 
-            <button
-                type="button"
-                id="save-profile"
-            >
-                Сохранить
-            </button>
+                    <button
+                        type="button"
+                        id="save-profile"
+                    >
+                        Сохранить
+                    </button>
 
-            <p id="profile-message"></p>
+                    <p id="profile-message"></p>
 
-        </div>
+                </div>
 
                 <div class="profile-stats">
 
@@ -141,6 +143,72 @@ document.addEventListener(
             </div>
 
         `;
+
+        const saveButton =
+            document.getElementById(
+                "save-profile"
+            );
+
+        saveButton.addEventListener(
+            "click",
+            async function() {
+
+                const username =
+                    document.getElementById(
+                        "username-input"
+                    ).value.trim();
+
+                const message =
+                    document.getElementById(
+                        "profile-message"
+                    );
+
+                if (!username) {
+
+                    message.textContent =
+                        "Введите имя.";
+
+                    return;
+                }
+
+                const response =
+                    await fetch(
+                        "/users/profile",
+                        {
+                            method: "PUT",
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({
+                                username: username
+                            })
+                        }
+                    );
+
+                const data =
+                    await response.json();
+
+                if (!response.ok) {
+
+                    message.textContent =
+                        data.detail ||
+                        "Ошибка изменения профиля.";
+
+                    return;
+                }
+
+                localStorage.setItem(
+                    "username",
+                    data.username
+                );
+
+                message.textContent =
+                    "Профиль обновлён.";
+
+                document.querySelector(
+                    ".profile-card h2"
+                ).textContent =
+                    data.username;
+            }
+        );
     }
 );
 

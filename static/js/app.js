@@ -1,17 +1,19 @@
 "use strict";
 
+function getAccessToken() {
+    return localStorage.getItem("access_token");
+}
 
-/* =========================================================
-   QUOTES — MAIN JAVASCRIPT
-   ========================================================= */
+function getAuthHeaders() {
+    const token = getAccessToken();
 
-
-/* =========================
-   NOTIFICATION BADGE
-   ========================= */
+    return {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+    };
+}
 
 async function updateNotificationCount() {
-
     const badge = document.getElementById(
         "notification-count"
     );
@@ -21,9 +23,11 @@ async function updateNotificationCount() {
     }
 
     try {
-
         const response = await fetch(
-            "/notifications/unread/count"
+            "/notifications/unread/count",
+            {
+                headers: getAuthHeaders()
+            }
         );
 
         if (!response.ok) {
@@ -37,231 +41,40 @@ async function updateNotificationCount() {
         );
 
         if (count > 0) {
-
             badge.textContent =
                 count > 99
                     ? "99+"
                     : count;
 
             badge.hidden = false;
-
         } else {
-
             badge.hidden = true;
-
         }
-
     } catch (error) {
-
         console.debug(
             "Notification API is unavailable."
         );
     }
 }
 
-
-/* =========================
-   FAVORITE BUTTONS
-   ========================= */
-
-f        if (favoriteButton) {
-
-            favoriteButton.addEventListener(
-                "click",
-                async () => {
-
-                    const userId =
-                        localStorage.getItem(
-                            "user_id"
-                        );
-
-                    if (!userId) {
-
-                        window.location.href =
-                            "/users/login";
-
-                        return;
-                    }
-
-                    const quoteId =
-                        favoriteButton.dataset.quoteId;
-
-                    const favorite =
-                        favoriteButton.dataset.favorite ===
-                        "true";
-
-                    const action =
-                        favorite
-                            ? "unfavorite"
-                            : "favorite";
-
-                    try {
-
-                        const response =
-                            await fetch(
-                                `/quotes/${quoteId}/${action}?user_id=${userId}`,
-                                {
-                                    method: "PUT"
-                                }
-                            );
-
-                        if (!response.ok) {
-
-                            throw new Error(
-                                "Ошибка при изменении избранного"
-                            );
-
-                        }
-
-                        favoriteButton.dataset.favorite =
-                            String(!favorite);
-
-                        favoriteButton.textContent =
-                            !favorite
-                                ? "♥ В избранном"
-                                : "♡ В избранное";
-
-                    } catch (error) {
-
-                        console.error(error);
-
-                    }
-
-                }
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+        const likeButton =
+            document.getElementById(
+                "like-button"
             );
-
-        }
-
-
-/* =========================
-   INITIALIZATION
-   ========================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-        updateNotificationCount();
-
-        initializeFavoriteButtons();
-
-    }
-);
-
-
-/* =========================
-   LIKE / FAVORITE
-   ========================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-if (likeButton) {
-
-    likeButton.addEventListener(
-        "click",
-        async () => {
-
-            const userId =
-                localStorage.getItem(
-                    "user_id"
-                );
-
-            if (!userId) {
-
-                window.location.href =
-                    "/users/login";
-
-                return;
-            }
-
-            const quoteId =
-                likeButton.dataset.quoteId;
-
-            const liked =
-                likeButton.dataset.liked ===
-                "true";
-
-            const action =
-                liked
-                    ? "unlike"
-                    : "like";
-
-            try {
-
-                const response =
-                    await fetch(
-                        `/quotes/${quoteId}/${action}?user_id=${userId}`,
-                        {
-                            method: "PUT"
-                        }
-                    );
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        "Ошибка при изменении лайка"
-                    );
-                }
-
-                const quote =
-                    await response.json();
-
-                likeButton.dataset.liked =
-                    String(!liked);
-
-                likeButton.textContent =
-                    !liked
-                        ? "💔 Убрать лайк"
-                        : "❤️ Нравится";
-
-                const likesElement =
-                    document.getElementById(
-                        "likes-count"
-                    );
-
-                if (likesElement) {
-
-                    likesElement.textContent =
-                        quote.likes;
-
-                }
-
-            } catch (error) {
-
-                console.error(error);
-
-            }
-
-        }
-    );
-
-}
 
         const favoriteButton =
             document.getElementById(
                 "favorite-button"
             );
 
-
-        /* =========================
-           LIKE
-           ========================= */
-
         if (likeButton) {
-
             likeButton.addEventListener(
                 "click",
                 async () => {
-
-                    const userId =
-                        localStorage.getItem(
-                            "user_id"
-                        );
-
-                    if (!userId) {
-
+                    if (!getAccessToken()) {
                         window.location.href =
                             "/users/login";
 
@@ -281,17 +94,16 @@ if (likeButton) {
                             : "like";
 
                     try {
-
                         const response =
                             await fetch(
-                                `/quotes/${quoteId}/${action}?user_id=${userId}`,
+                                `/quotes/${quoteId}/${action}`,
                                 {
-                                    method: "PUT"
+                                    method: "PUT",
+                                    headers: getAuthHeaders()
                                 }
                             );
 
                         if (!response.ok) {
-
                             throw new Error(
                                 "Ошибка при изменении лайка"
                             );
@@ -303,17 +115,10 @@ if (likeButton) {
                         likeButton.dataset.liked =
                             String(!liked);
 
-                        if (!liked) {
-
-                            likeButton.textContent =
-                                "💔 Убрать лайк";
-
-                        } else {
-
-                            likeButton.textContent =
-                                "❤️ Нравится";
-
-                        }
+                        likeButton.textContent =
+                            !liked
+                                ? "💔 Убрать лайк"
+                                : "❤️ Нравится";
 
                         const likesElement =
                             document.querySelector(
@@ -321,41 +126,21 @@ if (likeButton) {
                             );
 
                         if (likesElement) {
-
                             likesElement.textContent =
                                 quote.likes;
-
                         }
-
                     } catch (error) {
-
                         console.error(error);
-
                     }
-
                 }
             );
-
         }
 
-
-        /* =========================
-           FAVORITE
-           ========================= */
-
         if (favoriteButton) {
-
             favoriteButton.addEventListener(
                 "click",
                 async () => {
-
-                    const userId =
-                        localStorage.getItem(
-                            "user_id"
-                        );
-
-                    if (!userId) {
-
+                    if (!getAccessToken()) {
                         window.location.href =
                             "/users/login";
 
@@ -375,17 +160,16 @@ if (likeButton) {
                             : "favorite";
 
                     try {
-
                         const response =
                             await fetch(
-                                `/quotes/${quoteId}/${action}?user_id=${userId}`,
+                                `/quotes/${quoteId}/${action}`,
                                 {
-                                    method: "PUT"
+                                    method: "PUT",
+                                    headers: getAuthHeaders()
                                 }
                             );
 
                         if (!response.ok) {
-
                             throw new Error(
                                 "Ошибка при изменении избранного"
                             );
@@ -396,95 +180,86 @@ if (likeButton) {
                         favoriteButton.dataset.favorite =
                             String(!favorite);
 
-                        if (!favorite) {
-
-                            favoriteButton.textContent =
-                                "♥ В избранном";
-
-                        } else {
-
-                            favoriteButton.textContent =
-                                "♡ В избранное";
-
-                        }
-
+                        favoriteButton.textContent =
+                            !favorite
+                                ? "♥ В избранном"
+                                : "♡ В избранное";
                     } catch (error) {
-
                         console.error(error);
-
                     }
-
                 }
             );
-
         }
 
+        loadQuoteUserStatus();
     }
 );
 
+async function loadQuoteUserStatus() {
+    if (!getAccessToken()) {
+        return;
+    }
 
-        async function loadQuoteUserStatus() {
+    const likeButton =
+        document.getElementById(
+            "like-button"
+        );
 
-            const userId =
-                localStorage.getItem(
-                    "user_id"
-                );
+    const favoriteButton =
+        document.getElementById(
+            "favorite-button"
+        );
 
-            if (!userId) {
-                return;
+    const quoteId =
+        likeButton?.dataset.quoteId ||
+        favoriteButton?.dataset.quoteId;
+
+    if (!quoteId) {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            `/quotes/${quoteId}/user-status`,
+            {
+                headers: getAuthHeaders()
             }
+        );
 
-            const quoteId =
-                likeButton?.dataset.quoteId ||
-                favoriteButton?.dataset.quoteId;
-
-            if (!quoteId) {
-                return;
-            }
-
-            const response =
-                await fetch(
-                    `/quotes/${quoteId}/user-status?user_id=${userId}`
-                );
-
-            if (!response.ok) {
-                return;
-            }
-
-            const data =
-                await response.json();
-
-            if (likeButton) {
-
-                likeButton.dataset.liked =
-                    String(data.liked);
-
-                likeButton.textContent =
-                    data.liked
-                        ? "💔 Убрать лайк"
-                        : "❤️ Нравится";
-            }
-
-            if (favoriteButton) {
-
-                favoriteButton.dataset.favorite =
-                    String(data.favorite);
-
-                favoriteButton.textContent =
-                    data.favorite
-                        ? "♥ В избранном"
-                        : "♡ В избранное";
-            }
+        if (!response.ok) {
+            return;
         }
 
-/* =========================
-   COMMENTS
-   ========================= */
+        const data =
+            await response.json();
+
+        if (likeButton) {
+            likeButton.dataset.liked =
+                String(data.liked);
+
+            likeButton.textContent =
+                data.liked
+                    ? "💔 Убрать лайк"
+                    : "❤️ Нравится";
+        }
+
+        if (favoriteButton) {
+            favoriteButton.dataset.favorite =
+                String(data.favorite);
+
+            favoriteButton.textContent =
+                data.favorite
+                    ? "♥ В избранном"
+                    : "♡ В избранное";
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
 
 document.addEventListener(
     "DOMContentLoaded",
     () => {
-
         const commentForm =
             document.getElementById(
                 "comment-form"
@@ -503,14 +278,12 @@ document.addEventListener(
             commentForm.dataset.quoteId;
 
         async function loadComments() {
-
             const response =
                 await fetch(
                     `/quotes/${quoteId}/comments`
                 );
 
             if (!response.ok) {
-
                 commentsList.innerHTML =
                     "<p>Не удалось загрузить комментарии.</p>";
 
@@ -523,7 +296,6 @@ document.addEventListener(
             commentsList.innerHTML = "";
 
             if (comments.length === 0) {
-
                 commentsList.innerHTML =
                     "<p>Комментариев пока нет.</p>";
 
@@ -532,7 +304,6 @@ document.addEventListener(
 
             comments.forEach(
                 comment => {
-
                     const commentElement =
                         document.createElement(
                             "div"
@@ -570,7 +341,6 @@ document.addEventListener(
                     commentsList.appendChild(
                         commentElement
                     );
-
                 }
             );
 
@@ -580,11 +350,9 @@ document.addEventListener(
                 )
                 .forEach(
                     button => {
-
                         button.addEventListener(
                             "click",
                             async function() {
-
                                 const commentId =
                                     this.dataset.commentId;
 
@@ -592,7 +360,8 @@ document.addEventListener(
                                     await fetch(
                                         `/comments/${commentId}`,
                                         {
-                                            method: "DELETE"
+                                            method: "DELETE",
+                                            headers: getAuthHeaders()
                                         }
                                     );
 
@@ -601,19 +370,15 @@ document.addEventListener(
                                 }
 
                                 await loadComments();
-
                             }
                         );
-
                     }
                 );
         }
 
-
         commentForm.addEventListener(
             "submit",
             async function(event) {
-
                 event.preventDefault();
 
                 const text =
@@ -626,8 +391,7 @@ document.addEventListener(
                         "username"
                     );
 
-                if (!username) {
-
+                if (!username || !getAccessToken()) {
                     window.location.href =
                         "/users/login";
 
@@ -643,12 +407,7 @@ document.addEventListener(
                         `/quotes/${quoteId}/comments`,
                         {
                             method: "POST",
-
-                            headers: {
-                                "Content-Type":
-                                    "application/json"
-                            },
-
+                            headers: getAuthHeaders(),
                             body: JSON.stringify({
                                 author: username,
                                 text: text
@@ -665,24 +424,16 @@ document.addEventListener(
                 ).value = "";
 
                 await loadComments();
-
             }
         );
 
         loadComments();
-
     }
 );
-
-
-/* =========================
-   RATING
-   ========================= */
 
 document.addEventListener(
     "DOMContentLoaded",
     () => {
-
         const ratingStars =
             document.getElementById(
                 "rating-stars"
@@ -700,16 +451,13 @@ document.addEventListener(
         const quoteId =
             ratingStars.dataset.quoteId;
 
-
         async function loadRating() {
-
             const response =
                 await fetch(
                     `/ratings/quotes/${quoteId}`
                 );
 
             if (!response.ok) {
-
                 ratingInfo.textContent =
                     "Не удалось загрузить рейтинг.";
 
@@ -741,30 +489,23 @@ document.addEventListener(
                 )
                 .forEach(
                     button => {
-
                         const value =
                             Number(
                                 button.dataset.rating
                             );
 
                         if (value <= rounded) {
-
                             button.classList.add(
                                 "active"
                             );
-
                         } else {
-
                             button.classList.remove(
                                 "active"
                             );
-
                         }
-
                     }
                 );
         }
-
 
         document
             .querySelectorAll(
@@ -772,18 +513,10 @@ document.addEventListener(
             )
             .forEach(
                 button => {
-
                     button.addEventListener(
                         "click",
                         async function() {
-
-                            const userId =
-                                localStorage.getItem(
-                                    "user_id"
-                                );
-
-                            if (!userId) {
-
+                            if (!getAccessToken()) {
                                 window.location.href =
                                     "/users/login";
 
@@ -800,20 +533,9 @@ document.addEventListener(
                                     `/ratings/quotes/${quoteId}`,
                                     {
                                         method: "POST",
-
-                                        headers: {
-                                            "Content-Type":
-                                                "application/json"
-                                        },
-
+                                        headers: getAuthHeaders(),
                                         body: JSON.stringify({
-                                            user_id:
-                                                Number(
-                                                    userId
-                                                ),
-
-                                            rating:
-                                                rating
+                                            rating: rating
                                         })
                                     }
                                 );
@@ -824,32 +546,30 @@ document.addEventListener(
 
                             await loadRating();
 
+                            await loadUserRating(
+                                quoteId
+                            );
                         }
                     );
-
                 }
             );
 
         loadRating();
-        loadUserRating();
-
+        loadUserRating(quoteId);
     }
 );
 
-async function loadUserRating() {
-
-    const userId =
-        localStorage.getItem(
-            "user_id"
-        );
-
-    if (!userId) {
+async function loadUserRating(quoteId) {
+    if (!getAccessToken()) {
         return;
     }
 
     const response =
         await fetch(
-            `/ratings/quotes/${quoteId}/user?user_id=${userId}`
+            `/ratings/quotes/${quoteId}/user`,
+            {
+                headers: getAuthHeaders()
+            }
         );
 
     if (!response.ok) {
@@ -865,38 +585,27 @@ async function loadUserRating() {
         )
         .forEach(
             button => {
-
                 const value =
                     Number(
                         button.dataset.rating
                     );
 
                 if (value <= data.rating) {
-
                     button.classList.add(
                         "active"
                     );
-
                 } else {
-
                     button.classList.remove(
                         "active"
                     );
-
                 }
-
             }
         );
 }
 
-/* =========================
-   REGISTRATION
-   ========================= */
-
 document.addEventListener(
     "DOMContentLoaded",
     () => {
-
         const registerForm =
             document.getElementById(
                 "register-form"
@@ -909,7 +618,6 @@ document.addEventListener(
         registerForm.addEventListener(
             "submit",
             async function(event) {
-
                 event.preventDefault();
 
                 const username =
@@ -932,14 +640,13 @@ document.addEventListener(
                         "/users/",
                         {
                             method: "POST",
-
                             headers: {
                                 "Content-Type":
                                     "application/json"
                             },
-
                             body: JSON.stringify({
-                                username: username
+                                username: username,
+                                password: password
                             })
                         }
                     );
@@ -948,7 +655,6 @@ document.addEventListener(
                     await response.json();
 
                 if (!response.ok) {
-
                     message.textContent =
                         data.detail ||
                         "Ошибка регистрации.";
@@ -973,41 +679,14 @@ document.addEventListener(
 
                 window.location.href =
                     "/quotes-page";
-
             }
         );
-
     }
 );
-
-
-function getAccessToken() {
-    return localStorage.getItem(
-        "access_token"
-    );
-}
-
-function getAuthHeaders() {
-
-    const token =
-        localStorage.getItem(
-            "access_token"
-        );
-
-    return {
-        "Authorization":
-            `Bearer ${token}`
-    };
-}
-
-/* =========================
-   LOGIN
-   ========================= */
 
 document.addEventListener(
     "DOMContentLoaded",
     () => {
-
         const loginForm =
             document.getElementById(
                 "login-form"
@@ -1020,13 +699,17 @@ document.addEventListener(
         loginForm.addEventListener(
             "submit",
             async function(event) {
-
                 event.preventDefault();
 
                 const username =
                     document.getElementById(
                         "login-username"
                     ).value.trim();
+
+                const password =
+                    document.getElementById(
+                        "login-password"
+                    ).value;
 
                 const message =
                     document.getElementById(
@@ -1038,14 +721,13 @@ document.addEventListener(
                         "/users/login",
                         {
                             method: "POST",
-
                             headers: {
                                 "Content-Type":
                                     "application/json"
                             },
-
                             body: JSON.stringify({
-                                username: username
+                                username: username,
+                                password: password
                             })
                         }
                     );
@@ -1054,7 +736,6 @@ document.addEventListener(
                     await response.json();
 
                 if (!response.ok) {
-
                     message.textContent =
                         data.detail ||
                         "Ошибка входа.";
@@ -1063,26 +744,28 @@ document.addEventListener(
                 }
 
                 localStorage.setItem(
+                    "access_token",
+                    data.access_token
+                );
+
+                localStorage.setItem(
                     "user_id",
-                    data.id
+                    data.user.id
                 );
 
                 localStorage.setItem(
                     "username",
-                    data.username
+                    data.user.username
                 );
 
                 window.location.href =
                     "/quotes-page";
-
             }
         );
-
     }
 );
 
 function logout() {
-
     localStorage.removeItem(
         "access_token"
     );
@@ -1105,22 +788,15 @@ const logoutButton =
     );
 
 if (logoutButton) {
-
     logoutButton.addEventListener(
         "click",
         logout
     );
-
 }
-
-/* =========================
-   USER
-   ========================= */
 
 document.addEventListener(
     "DOMContentLoaded",
     () => {
-
         const userInfo =
             document.getElementById(
                 "user-info"
@@ -1142,51 +818,20 @@ document.addEventListener(
             );
 
         if (username) {
-
             if (userInfo) {
-
                 userInfo.textContent =
                     username;
-
             }
 
             if (loginLink) {
-
                 loginLink.style.display =
                     "none";
-
             }
 
             if (logoutButton) {
-
                 logoutButton.style.display =
                     "inline-block";
-
             }
-
         }
-
-        if (logoutButton) {
-
-            logoutButton.addEventListener(
-                "click",
-                function() {
-
-                    localStorage.removeItem(
-                        "user_id"
-                    );
-
-                    localStorage.removeItem(
-                        "username"
-                    );
-
-                    window.location.href =
-                        "/";
-
-                }
-            );
-
-        }
-
     }
 );

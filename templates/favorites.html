@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block title %}
@@ -28,9 +29,9 @@ document.addEventListener(
     "DOMContentLoaded",
     async function() {
 
-        const userId =
+        const token =
             localStorage.getItem(
-                "user_id"
+                "access_token"
             );
 
         const list =
@@ -38,7 +39,7 @@ document.addEventListener(
                 "favorites-list"
             );
 
-        if (!userId) {
+        if (!token) {
 
             window.location.href =
                 "/users/login";
@@ -48,113 +49,168 @@ document.addEventListener(
 
         async function loadFavorites() {
 
-            const response =
-                await fetch(
-                    `/quotes/favorites?user_id=${userId}`
-                );
+            try {
 
-            if (!response.ok) {
-
-                list.innerHTML =
-                    "<p>Не удалось загрузить избранное.</p>";
-
-                return;
-            }
-
-            const quotes =
-                await response.json();
-
-            list.innerHTML = "";
-
-            if (quotes.length === 0) {
-
-                list.innerHTML =
-                    "<p>В избранном пока нет цитат.</p>";
-
-                return;
-            }
-
-            quotes.forEach(
-                quote => {
-
-                    const element =
-                        document.createElement(
-                            "article"
-                        );
-
-                    element.className =
-                        "quote-card";
-
-                    element.innerHTML = `
-                        <span class="quote-category">
-                            ${quote.category}
-                        </span>
-
-                        <blockquote>
-                            “${quote.text}”
-                        </blockquote>
-
-                        <strong>
-                            ${quote.author}
-                        </strong>
-
-                        <div>
-                            <a
-                                href="/quotes-page/${quote.id}"
-                            >
-                                Открыть цитату
-                            </a>
-
-                            <button
-                                type="button"
-                                class="remove-favorite"
-                                data-quote-id="${quote.id}"
-                            >
-                                Убрать из избранного
-                            </button>
-                        </div>
-                    `;
-
-                    list.appendChild(
-                        element
+                const response =
+                    await fetch(
+                        "/quotes/favorites",
+                        {
+                            headers: {
+                                "Authorization": `Bearer ${token}`
+                            }
+                        }
                     );
 
-                }
-            );
+                if (!response.ok) {
 
-            document
-                .querySelectorAll(
-                    ".remove-favorite"
-                )
-                .forEach(
-                    button => {
+                    list.textContent =
+                        "Не удалось загрузить избранное.";
+
+                    return;
+                }
+
+                const quotes =
+                    await response.json();
+
+                list.replaceChildren();
+
+                if (quotes.length === 0) {
+
+                    list.textContent =
+                        "В избранном пока нет цитат.";
+
+                    return;
+                }
+
+                quotes.forEach(
+                    quote => {
+
+                        const element =
+                            document.createElement(
+                                "article"
+                            );
+
+                        element.className =
+                            "quote-card";
+
+                        const category =
+                            document.createElement(
+                                "span"
+                            );
+
+                        category.className =
+                            "quote-category";
+
+                        category.textContent =
+                            quote.category || "";
+
+                        const blockquote =
+                            document.createElement(
+                                "blockquote"
+                            );
+
+                        blockquote.textContent =
+                            `“${quote.text}”`;
+
+                        const author =
+                            document.createElement(
+                                "strong"
+                            );
+
+                        author.textContent =
+                            quote.author || "Неизвестный автор";
+
+                        const actions =
+                            document.createElement(
+                                "div"
+                            );
+
+                        const link =
+                            document.createElement(
+                                "a"
+                            );
+
+                        link.href =
+                            `/quotes-page/${quote.id}`;
+
+                        link.textContent =
+                            "Открыть цитату";
+
+                        const button =
+                            document.createElement(
+                                "button"
+                            );
+
+                        button.type = "button";
+
+                        button.className =
+                            "remove-favorite";
+
+                        button.dataset.quoteId =
+                            quote.id;
+
+                        button.textContent =
+                            "Убрать из избранного";
 
                         button.addEventListener(
                             "click",
                             async function() {
 
-                                const quoteId =
-                                    this.dataset.quoteId;
+                                try {
 
-                                const response =
-                                    await fetch(
-                                        `/quotes/${quoteId}/unfavorite?user_id=${userId}`,
-                                        {
-                                            method: "PUT"
-                                        }
-                                    );
+                                    const response =
+                                        await fetch(
+                                            `/quotes/${quote.id}/unfavorite`,
+                                            {
+                                                method: "PUT",
+                                                headers: {
+                                                    "Authorization": `Bearer ${token}`
+                                                }
+                                            }
+                                        );
 
-                                if (!response.ok) {
-                                    return;
+                                    if (!response.ok) {
+                                        return;
+                                    }
+
+                                    await loadFavorites();
+
+                                } catch (error) {
+
+                                    console.error(error);
+
                                 }
-
-                                await loadFavorites();
 
                             }
                         );
 
+                        actions.append(
+                            link,
+                            button
+                        );
+
+                        element.append(
+                            category,
+                            blockquote,
+                            author,
+                            actions
+                        );
+
+                        list.appendChild(
+                            element
+                        );
+
                     }
                 );
+
+            } catch (error) {
+
+                console.error(error);
+
+                list.textContent =
+                    "Не удалось подключиться к серверу.";
+
+            }
         }
 
         await loadFavorites();

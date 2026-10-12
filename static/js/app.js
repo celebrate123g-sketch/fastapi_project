@@ -5,11 +5,39 @@ function getAccessToken() {
 }
 
 function getAuthHeaders() {
+    const headers = {
+        "Content-Type": "application/json"
+    };
+
     const token = getAccessToken();
 
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    return headers;
+}
+
+async function fetchJSON(url, options = {}) {
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            ...getAuthHeaders(),
+            ...options.headers
+        }
+    });
+
+    let data = {};
+
+    try {
+        data = await response.json();
+    } catch (error) {
+        data = {};
+    }
+
     return {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
+        response,
+        data
     };
 }
 
@@ -18,38 +46,29 @@ async function updateNotificationCount() {
         "notification-count"
     );
 
-    if (!badge) {
+    if (!badge || !getAccessToken()) {
+        if (badge) {
+            badge.hidden = true;
+        }
+
         return;
     }
 
     try {
-        const response = await fetch(
-            "/notifications/unread/count",
-            {
-                headers: getAuthHeaders()
-            }
+        const { response, data } = await fetchJSON(
+            "/notifications/unread/count"
         );
 
         if (!response.ok) {
             return;
         }
 
-        const data = await response.json();
+        const count = Number(data.count ?? 0);
 
-        const count = Number(
-            data.count ?? 0
-        );
+        badge.textContent =
+            count > 99 ? "99+" : String(count);
 
-        if (count > 0) {
-            badge.textContent =
-                count > 99
-                    ? "99+"
-                    : count;
-
-            badge.hidden = false;
-        } else {
-            badge.hidden = true;
-        }
+        badge.hidden = count <= 0;
     } catch (error) {
         console.debug(
             "Notification API is unavailable."
@@ -57,18 +76,70 @@ async function updateNotificationCount() {
     }
 }
 
+async function loadQuoteUserStatus() {
+    if (!getAccessToken()) {
+        return;
+    }
+
+    const likeButton = document.getElementById(
+        "like-button"
+    );
+
+    const favoriteButton = document.getElementById(
+        "favorite-button"
+    );
+
+    const quoteId =
+        likeButton?.dataset.quoteId ||
+        favoriteButton?.dataset.quoteId;
+
+    if (!quoteId) {
+        return;
+    }
+
+    try {
+        const { response, data } = await fetchJSON(
+            `/quotes/${quoteId}/user-status`
+        );
+
+        if (!response.ok) {
+            return;
+        }
+
+        if (likeButton) {
+            likeButton.dataset.liked = String(
+                data.liked
+            );
+
+            likeButton.textContent = data.liked
+                ? "💔 Убрать лайк"
+                : "❤️ Нравится";
+        }
+
+        if (favoriteButton) {
+            favoriteButton.dataset.favorite = String(
+                data.favorite
+            );
+
+            favoriteButton.textContent = data.favorite
+                ? "♥ В избранном"
+                : "♡ В избранное";
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
+
 document.addEventListener(
     "DOMContentLoaded",
     () => {
-        const likeButton =
-            document.getElementById(
-                "like-button"
-            );
+        const likeButton = document.getElementById(
+            "like-button"
+        );
 
-        const favoriteButton =
-            document.getElementById(
-                "favorite-button"
-            );
+        const favoriteButton = document.getElementById(
+            "favorite-button"
+        );
 
         if (likeButton) {
             likeButton.addEventListener(
@@ -88,46 +159,44 @@ document.addEventListener(
                         likeButton.dataset.liked ===
                         "true";
 
-                    const action =
-                        liked
-                            ? "unlike"
-                            : "like";
+                    const action = liked
+                        ? "unlike"
+                        : "like";
 
                     try {
-                        const response =
-                            await fetch(
+                        const { response, data } =
+                            await fetchJSON(
                                 `/quotes/${quoteId}/${action}`,
                                 {
-                                    method: "PUT",
-                                    headers: getAuthHeaders()
+                                    method: "PUT"
                                 }
                             );
 
                         if (!response.ok) {
                             throw new Error(
-                                "Ошибка при изменении лайка"
+                                data.detail ||
+                                "Не удалось изменить лайк."
                             );
                         }
-
-                        const quote =
-                            await response.json();
 
                         likeButton.dataset.liked =
                             String(!liked);
 
-                        likeButton.textContent =
-                            !liked
-                                ? "💔 Убрать лайк"
-                                : "❤️ Нравится";
+                        likeButton.textContent = !liked
+                            ? "💔 Убрать лайк"
+                            : "❤️ Нравится";
 
                         const likesElement =
                             document.querySelector(
                                 ".single-quote-stats .quote-stat:nth-child(2) strong"
                             );
 
-                        if (likesElement) {
+                        if (
+                            likesElement &&
+                            data.likes !== undefined
+                        ) {
                             likesElement.textContent =
-                                quote.likes;
+                                data.likes;
                         }
                     } catch (error) {
                         console.error(error);
@@ -154,28 +223,25 @@ document.addEventListener(
                         favoriteButton.dataset.favorite ===
                         "true";
 
-                    const action =
-                        favorite
-                            ? "unfavorite"
-                            : "favorite";
+                    const action = favorite
+                        ? "unfavorite"
+                        : "favorite";
 
                     try {
-                        const response =
-                            await fetch(
+                        const { response, data } =
+                            await fetchJSON(
                                 `/quotes/${quoteId}/${action}`,
                                 {
-                                    method: "PUT",
-                                    headers: getAuthHeaders()
+                                    method: "PUT"
                                 }
                             );
 
                         if (!response.ok) {
                             throw new Error(
-                                "Ошибка при изменении избранного"
+                                data.detail ||
+                                "Не удалось изменить избранное."
                             );
                         }
-
-                        await response.json();
 
                         favoriteButton.dataset.favorite =
                             String(!favorite);
@@ -192,238 +258,215 @@ document.addEventListener(
         }
 
         loadQuoteUserStatus();
+        updateNotificationCount();
     }
 );
-
-async function loadQuoteUserStatus() {
-    if (!getAccessToken()) {
-        return;
-    }
-
-    const likeButton =
-        document.getElementById(
-            "like-button"
-        );
-
-    const favoriteButton =
-        document.getElementById(
-            "favorite-button"
-        );
-
-    const quoteId =
-        likeButton?.dataset.quoteId ||
-        favoriteButton?.dataset.quoteId;
-
-    if (!quoteId) {
-        return;
-    }
-
-    try {
-        const response = await fetch(
-            `/quotes/${quoteId}/user-status`,
-            {
-                headers: getAuthHeaders()
-            }
-        );
-
-        if (!response.ok) {
-            return;
-        }
-
-        const data =
-            await response.json();
-
-        if (likeButton) {
-            likeButton.dataset.liked =
-                String(data.liked);
-
-            likeButton.textContent =
-                data.liked
-                    ? "💔 Убрать лайк"
-                    : "❤️ Нравится";
-        }
-
-        if (favoriteButton) {
-            favoriteButton.dataset.favorite =
-                String(data.favorite);
-
-            favoriteButton.textContent =
-                data.favorite
-                    ? "♥ В избранном"
-                    : "♡ В избранное";
-        }
-    } catch (error) {
-        console.error(error);
-    }
-}
 
 document.addEventListener(
     "DOMContentLoaded",
     () => {
-        const commentForm =
-            document.getElementById(
-                "comment-form"
-            );
+        const commentForm = document.getElementById(
+            "comment-form"
+        );
 
-        const commentsList =
-            document.getElementById(
-                "comments-list"
-            );
+        const commentsList = document.getElementById(
+            "comments-list"
+        );
 
         if (!commentForm || !commentsList) {
             return;
         }
 
-        const quoteId =
-            commentForm.dataset.quoteId;
+        const quoteId = commentForm.dataset.quoteId;
 
         async function loadComments() {
-            const response =
-                await fetch(
+            try {
+                const response = await fetch(
                     `/quotes/${quoteId}/comments`
                 );
 
-            if (!response.ok) {
-                commentsList.innerHTML =
-                    "<p>Не удалось загрузить комментарии.</p>";
+                if (!response.ok) {
+                    commentsList.textContent =
+                        "Не удалось загрузить комментарии.";
 
-                return;
-            }
+                    return;
+                }
 
-            const comments =
-                await response.json();
+                const comments = await response.json();
 
-            commentsList.innerHTML = "";
+                commentsList.replaceChildren();
 
-            if (comments.length === 0) {
-                commentsList.innerHTML =
-                    "<p>Комментариев пока нет.</p>";
+                if (comments.length === 0) {
+                    commentsList.textContent =
+                        "Комментариев пока нет.";
 
-                return;
-            }
+                    return;
+                }
 
-            comments.forEach(
-                comment => {
+                comments.forEach(comment => {
                     const commentElement =
-                        document.createElement(
-                            "div"
-                        );
+                        document.createElement("div");
 
                     commentElement.className =
                         "comment-item";
 
-                    commentElement.innerHTML = `
-                        <div class="comment-header">
-                            <strong>
-                                ${comment.author}
-                            </strong>
+                    const header =
+                        document.createElement("div");
 
-                            <button
-                                type="button"
-                                class="delete-comment"
-                                data-comment-id="${comment.id}"
-                            >
-                                Удалить
-                            </button>
-                        </div>
+                    header.className = "comment-header";
 
-                        <p>
-                            ${comment.text}
-                        </p>
+                    const author =
+                        document.createElement("strong");
 
-                        <small>
-                            ${new Date(
-                                comment.created_at
-                            ).toLocaleString("ru-RU")}
-                        </small>
-                    `;
+                    author.textContent =
+                        comment.author || "Пользователь";
+
+                    const deleteButton =
+                        document.createElement("button");
+
+                    deleteButton.type = "button";
+                    deleteButton.className =
+                        "delete-comment";
+
+                    deleteButton.dataset.commentId =
+                        comment.id;
+
+                    deleteButton.textContent = "Удалить";
+
+                    header.append(author, deleteButton);
+
+                    const text =
+                        document.createElement("p");
+
+                    text.textContent = comment.text;
+
+                    const date =
+                        document.createElement("small");
+
+                    date.textContent = comment.created_at
+                        ? new Date(
+                            comment.created_at
+                        ).toLocaleString("ru-RU")
+                        : "";
+
+                    commentElement.append(
+                        header,
+                        text,
+                        date
+                    );
 
                     commentsList.appendChild(
                         commentElement
                     );
-                }
-            );
+                });
+            } catch (error) {
+                console.error(error);
 
-            document
-                .querySelectorAll(
-                    ".delete-comment"
-                )
-                .forEach(
-                    button => {
-                        button.addEventListener(
-                            "click",
-                            async function() {
-                                const commentId =
-                                    this.dataset.commentId;
-
-                                const response =
-                                    await fetch(
-                                        `/comments/${commentId}`,
-                                        {
-                                            method: "DELETE",
-                                            headers: getAuthHeaders()
-                                        }
-                                    );
-
-                                if (!response.ok) {
-                                    return;
-                                }
-
-                                await loadComments();
-                            }
-                        );
-                    }
-                );
+                commentsList.textContent =
+                    "Не удалось загрузить комментарии.";
+            }
         }
 
-        commentForm.addEventListener(
-            "submit",
-            async function(event) {
-                event.preventDefault();
+        commentsList.addEventListener(
+            "click",
+            async event => {
+                const button = event.target.closest(
+                    ".delete-comment"
+                );
 
-                const text =
-                    document.getElementById(
-                        "comment-text"
-                    ).value.trim();
+                if (!button) {
+                    return;
+                }
 
-                const username =
-                    localStorage.getItem(
-                        "username"
-                    );
-
-                if (!username || !getAccessToken()) {
+                if (!getAccessToken()) {
                     window.location.href =
                         "/users/login";
 
                     return;
                 }
 
+                const commentId =
+                    button.dataset.commentId;
+
+                try {
+                    const { response, data } =
+                        await fetchJSON(
+                            `/comments/${commentId}`,
+                            {
+                                method: "DELETE"
+                            }
+                        );
+
+                    if (!response.ok) {
+                        console.error(
+                            data.detail ||
+                            "Не удалось удалить комментарий."
+                        );
+
+                        return;
+                    }
+
+                    await loadComments();
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+        );
+
+        commentForm.addEventListener(
+            "submit",
+            async event => {
+                event.preventDefault();
+
+                if (!getAccessToken()) {
+                    window.location.href =
+                        "/users/login";
+
+                    return;
+                }
+
+                const textInput =
+                    document.getElementById(
+                        "comment-text"
+                    );
+
+                if (!textInput) {
+                    return;
+                }
+
+                const text = textInput.value.trim();
+
                 if (!text) {
                     return;
                 }
 
-                const response =
-                    await fetch(
-                        `/quotes/${quoteId}/comments`,
-                        {
-                            method: "POST",
-                            headers: getAuthHeaders(),
-                            body: JSON.stringify({
-                                author: username,
-                                text: text
-                            })
-                        }
-                    );
+                try {
+                    const { response, data } =
+                        await fetchJSON(
+                            `/quotes/${quoteId}/comments`,
+                            {
+                                method: "POST",
+                                body: JSON.stringify({
+                                    text: text
+                                })
+                            }
+                        );
 
-                if (!response.ok) {
-                    return;
+                    if (!response.ok) {
+                        console.error(
+                            data.detail ||
+                            "Не удалось добавить комментарий."
+                        );
+
+                        return;
+                    }
+
+                    textInput.value = "";
+
+                    await loadComments();
+                } catch (error) {
+                    console.error(error);
                 }
-
-                document.getElementById(
-                    "comment-text"
-                ).value = "";
-
-                await loadComments();
             }
         );
 
@@ -434,106 +477,88 @@ document.addEventListener(
 document.addEventListener(
     "DOMContentLoaded",
     () => {
-        const ratingStars =
-            document.getElementById(
-                "rating-stars"
-            );
+        const ratingStars = document.getElementById(
+            "rating-stars"
+        );
 
-        const ratingInfo =
-            document.getElementById(
-                "rating-info"
-            );
+        const ratingInfo = document.getElementById(
+            "rating-info"
+        );
 
         if (!ratingStars || !ratingInfo) {
             return;
         }
 
-        const quoteId =
-            ratingStars.dataset.quoteId;
+        const quoteId = ratingStars.dataset.quoteId;
 
         async function loadRating() {
-            const response =
-                await fetch(
+            try {
+                const response = await fetch(
                     `/ratings/quotes/${quoteId}`
                 );
 
-            if (!response.ok) {
-                ratingInfo.textContent =
-                    "Не удалось загрузить рейтинг.";
+                if (!response.ok) {
+                    ratingInfo.textContent =
+                        "Не удалось загрузить рейтинг.";
 
-                return;
-            }
+                    return;
+                }
 
-            const data =
-                await response.json();
+                const data = await response.json();
 
-            const average =
-                Number(
+                const average = Number(
                     data.average_rating || 0
                 );
 
-            const votes =
-                Number(
+                const votes = Number(
                     data.votes || 0
                 );
 
-            ratingInfo.textContent =
-                `Рейтинг: ${average.toFixed(1)} / 5 (${votes} оценок)`;
+                ratingInfo.textContent =
+                    `Рейтинг: ${average.toFixed(1)} / 5 (${votes} оценок)`;
 
-            const rounded =
-                Math.round(average);
+                const rounded = Math.round(average);
 
-            document
-                .querySelectorAll(
-                    "#rating-stars button"
-                )
-                .forEach(
-                    button => {
-                        const value =
-                            Number(
-                                button.dataset.rating
-                            );
+                ratingStars
+                    .querySelectorAll("button")
+                    .forEach(button => {
+                        const value = Number(
+                            button.dataset.rating
+                        );
 
-                        if (value <= rounded) {
-                            button.classList.add(
-                                "active"
-                            );
-                        } else {
-                            button.classList.remove(
-                                "active"
-                            );
-                        }
-                    }
-                );
+                        button.classList.toggle(
+                            "active",
+                            value <= rounded
+                        );
+                    });
+            } catch (error) {
+                console.error(error);
+            }
         }
 
-        document
-            .querySelectorAll(
-                "#rating-stars button"
-            )
-            .forEach(
-                button => {
-                    button.addEventListener(
-                        "click",
-                        async function() {
-                            if (!getAccessToken()) {
-                                window.location.href =
-                                    "/users/login";
+        ratingStars
+            .querySelectorAll("button")
+            .forEach(button => {
+                button.addEventListener(
+                    "click",
+                    async () => {
+                        if (!getAccessToken()) {
+                            window.location.href =
+                                "/users/login";
 
-                                return;
-                            }
+                            return;
+                        }
 
-                            const rating =
-                                Number(
-                                    this.dataset.rating
-                                );
+                        const rating = Number(
+                            button.dataset.rating
+                        );
 
-                            const response =
-                                await fetch(
+                        try {
+                            const { response, data } =
+                                await fetchJSON(
                                     `/ratings/quotes/${quoteId}`,
                                     {
                                         method: "POST",
-                                        headers: getAuthHeaders(),
                                         body: JSON.stringify({
                                             rating: rating
                                         })
@@ -541,18 +566,22 @@ document.addEventListener(
                                 );
 
                             if (!response.ok) {
+                                console.error(
+                                    data.detail ||
+                                    "Не удалось сохранить оценку."
+                                );
+
                                 return;
                             }
 
                             await loadRating();
-
-                            await loadUserRating(
-                                quoteId
-                            );
+                            await loadUserRating(quoteId);
+                        } catch (error) {
+                            console.error(error);
                         }
-                    );
-                }
-            );
+                    }
+                );
+            });
 
         loadRating();
         loadUserRating(quoteId);
@@ -564,52 +593,40 @@ async function loadUserRating(quoteId) {
         return;
     }
 
-    const response =
-        await fetch(
-            `/ratings/quotes/${quoteId}/user`,
-            {
-                headers: getAuthHeaders()
-            }
+    try {
+        const { response, data } = await fetchJSON(
+            `/ratings/quotes/${quoteId}/user`
         );
 
-    if (!response.ok) {
-        return;
+        if (!response.ok) {
+            return;
+        }
+
+        document
+            .querySelectorAll(
+                "#rating-stars button"
+            )
+            .forEach(button => {
+                const value = Number(
+                    button.dataset.rating
+                );
+
+                button.classList.toggle(
+                    "active",
+                    value <= Number(data.rating || 0)
+                );
+            });
+    } catch (error) {
+        console.error(error);
     }
-
-    const data =
-        await response.json();
-
-    document
-        .querySelectorAll(
-            "#rating-stars button"
-        )
-        .forEach(
-            button => {
-                const value =
-                    Number(
-                        button.dataset.rating
-                    );
-
-                if (value <= data.rating) {
-                    button.classList.add(
-                        "active"
-                    );
-                } else {
-                    button.classList.remove(
-                        "active"
-                    );
-                }
-            }
-        );
 }
 
 document.addEventListener(
     "DOMContentLoaded",
     () => {
-        const registerForm =
-            document.getElementById(
-                "register-form"
-            );
+        const registerForm = document.getElementById(
+            "register-form"
+        );
 
         if (!registerForm) {
             return;
@@ -617,7 +634,7 @@ document.addEventListener(
 
         registerForm.addEventListener(
             "submit",
-            async function(event) {
+            async event => {
                 event.preventDefault();
 
                 const username =
@@ -635,50 +652,37 @@ document.addEventListener(
                         "register-message"
                     );
 
-                const response =
-                    await fetch(
-                        "/users/",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type":
-                                    "application/json"
-                            },
-                            body: JSON.stringify({
-                                username: username,
-                                password: password
-                            })
-                        }
-                    );
+                try {
+                    const { response, data } =
+                        await fetchJSON(
+                            "/users/",
+                            {
+                                method: "POST",
+                                body: JSON.stringify({
+                                    username: username,
+                                    password: password
+                                })
+                            }
+                        );
 
-                const data =
-                    await response.json();
+                    if (!response.ok) {
+                        message.textContent =
+                            data.detail ||
+                            "Ошибка регистрации.";
 
-                if (!response.ok) {
+                        return;
+                    }
+
+                    saveUserSession(data);
+
+                    window.location.href =
+                        "/quotes-page";
+                } catch (error) {
+                    console.error(error);
+
                     message.textContent =
-                        data.detail ||
-                        "Ошибка регистрации.";
-
-                    return;
+                        "Не удалось подключиться к серверу.";
                 }
-
-                localStorage.setItem(
-                    "access_token",
-                    data.access_token
-                );
-
-                localStorage.setItem(
-                    "user_id",
-                    data.user.id
-                );
-
-                localStorage.setItem(
-                    "username",
-                    data.user.username
-                );
-
-                window.location.href =
-                    "/quotes-page";
             }
         );
     }
@@ -687,10 +691,9 @@ document.addEventListener(
 document.addEventListener(
     "DOMContentLoaded",
     () => {
-        const loginForm =
-            document.getElementById(
-                "login-form"
-            );
+        const loginForm = document.getElementById(
+            "login-form"
+        );
 
         if (!loginForm) {
             return;
@@ -698,7 +701,7 @@ document.addEventListener(
 
         loginForm.addEventListener(
             "submit",
-            async function(event) {
+            async event => {
                 event.preventDefault();
 
                 const username =
@@ -716,87 +719,75 @@ document.addEventListener(
                         "login-message"
                     );
 
-                const response =
-                    await fetch(
-                        "/users/login",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type":
-                                    "application/json"
-                            },
-                            body: JSON.stringify({
-                                username: username,
-                                password: password
-                            })
-                        }
-                    );
+                try {
+                    const { response, data } =
+                        await fetchJSON(
+                            "/users/login",
+                            {
+                                method: "POST",
+                                body: JSON.stringify({
+                                    username: username,
+                                    password: password
+                                })
+                            }
+                        );
 
-                const data =
-                    await response.json();
+                    if (!response.ok) {
+                        message.textContent =
+                            data.detail ||
+                            "Ошибка входа.";
 
-                if (!response.ok) {
+                        return;
+                    }
+
+                    saveUserSession(data);
+
+                    window.location.href =
+                        "/quotes-page";
+                } catch (error) {
+                    console.error(error);
+
                     message.textContent =
-                        data.detail ||
-                        "Ошибка входа.";
-
-                    return;
+                        "Не удалось подключиться к серверу.";
                 }
-
-                localStorage.setItem(
-                    "access_token",
-                    data.access_token
-                );
-
-                localStorage.setItem(
-                    "user_id",
-                    data.user.id
-                );
-
-                localStorage.setItem(
-                    "username",
-                    data.user.username
-                );
-
-                window.location.href =
-                    "/quotes-page";
             }
         );
     }
 );
 
-function logout() {
-    localStorage.removeItem(
-        "access_token"
+function saveUserSession(data) {
+    localStorage.setItem(
+        "access_token",
+        data.access_token
     );
 
-    localStorage.removeItem(
-        "user_id"
+    localStorage.setItem(
+        "user_id",
+        data.user.id
     );
 
-    localStorage.removeItem(
-        "username"
+    localStorage.setItem(
+        "username",
+        data.user.username
     );
-
-    window.location.href =
-        "/";
 }
 
-const logoutButton =
-    document.getElementById(
-        "logout-button"
-    );
+function logout() {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("username");
 
-if (logoutButton) {
-    logoutButton.addEventListener(
-        "click",
-        logout
-    );
+    window.location.href = "/";
 }
 
 document.addEventListener(
     "DOMContentLoaded",
     () => {
+        const logoutButton =
+            document.getElementById(
+                "logout-button"
+            );
+
         const userInfo =
             document.getElementById(
                 "user-info"
@@ -807,30 +798,40 @@ document.addEventListener(
                 "login-link"
             );
 
-        const logoutButton =
-            document.getElementById(
-                "logout-button"
-            );
-
         const username =
-            localStorage.getItem(
-                "username"
-            );
+            localStorage.getItem("username");
 
-        if (username) {
+        if (logoutButton) {
+            logoutButton.addEventListener(
+                "click",
+                logout
+            );
+        }
+
+        if (username && getAccessToken()) {
             if (userInfo) {
-                userInfo.textContent =
-                    username;
+                userInfo.textContent = username;
             }
 
             if (loginLink) {
-                loginLink.style.display =
-                    "none";
+                loginLink.style.display = "none";
             }
 
             if (logoutButton) {
                 logoutButton.style.display =
                     "inline-block";
+            }
+        } else {
+            if (userInfo) {
+                userInfo.textContent = "";
+            }
+
+            if (logoutButton) {
+                logoutButton.style.display = "none";
+            }
+
+            if (loginLink) {
+                loginLink.style.display = "inline-block";
             }
         }
     }

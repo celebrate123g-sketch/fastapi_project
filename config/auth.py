@@ -1,7 +1,12 @@
+
+import os
 import jwt
 from datetime import datetime, timedelta, timezone
 
-SECRET_KEY = "change-this-secret-key"
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY is not configured.")
 
 ALGORITHM = "HS256"
 

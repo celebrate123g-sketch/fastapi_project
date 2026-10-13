@@ -1,3 +1,4 @@
+
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
@@ -5,30 +6,29 @@ from sqlalchemy.orm import Session
 from fastapi.templating import Jinja2Templates
 
 from database.database import get_db
-
-from schemas.quote import (
-    QuoteCreate,
-    QuoteUpdate
-)
+from database.models import UserModel, user_likes, user_favorites
+from dependencies.auth import get_current_user
+from schemas.quote import QuoteCreate, QuoteUpdate
 
 from services.quote_service import (
     add_to_favorites,
     create_quote,
     delete_quote,
     get_all_quotes,
+    get_deleted_quotes,
     get_favorite_quotes,
     get_most_viewed_quotes,
     get_popular_quotes,
     get_quote_by_id,
     get_quotes_by_category,
     get_random_quote,
+    get_trending_quotes,
     increment_views,
     like_quote,
     remove_from_favorites,
     search_quotes,
     unlike_quote,
     update_quote,
-    get_deleted_quotes,
     restore_quote,
     force_delete_quote,
     clear_trash,
@@ -36,20 +36,9 @@ from services.quote_service import (
     count_search_quotes,
 )
 
-from dependencies.auth import get_current_user
-from database.models import UserModel
-from fastapi import Depends
-from dependencies.auth import get_current_user
-from database.models import user_likes, user_favorites
+templates = Jinja2Templates(directory="templates")
 
-templates = Jinja2Templates(
-    directory="templates"
-)
-
-
-router = APIRouter(
-    tags=["Quotes"]
-)
+router = APIRouter(tags=["Quotes"])
 
 
 @router.get("/")
@@ -188,26 +177,12 @@ def unlike(
     )
 
 
-@router.put("/quotes/{quote_id}/unfavorite")
-def unfavorite(
-    quote_id: int,
-    current_user: UserModel = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    return remove_from_favorites(
-        db,
-        quote_id,
-        current_user.id
-    )
-
 @router.get("/quotes/{quote_id}/user-status")
 def quote_user_status(
     quote_id: int,
     current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    from database.models import user_likes, user_favorites
-
     liked = (
         db.query(user_likes)
         .filter(
@@ -274,9 +249,7 @@ def search(
 def trash(
     db: Session = Depends(get_db)
 ):
-    return get_deleted_quotes(
-        db
-    )
+    return get_deleted_quotes(db)
 
 
 @router.put("/trash/{quote_id}/restore")
@@ -305,18 +278,14 @@ def force_delete(
 def empty_trash(
     db: Session = Depends(get_db)
 ):
-    return clear_trash(
-        db
-    )
+    return clear_trash(db)
 
 
 @router.put("/trash/restore-all")
 def restore_all(
     db: Session = Depends(get_db)
 ):
-    return restore_all_quotes(
-        db
-    )
+    return restore_all_quotes(db)
 
 
 @router.get("/quotes-page")
@@ -392,6 +361,7 @@ def quote_page(
             "quote": quote
         }
     )
+
 
 @router.get("/favorites")
 def favorites_page(

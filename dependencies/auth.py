@@ -1,3 +1,4 @@
+
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
@@ -7,13 +8,20 @@ from database.database import get_db
 from database.models import UserModel
 
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_db)
-):
+) -> UserModel:
+
+    if credentials is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required."
+        )
+
     token = credentials.credentials
 
     payload = decode_access_token(token)

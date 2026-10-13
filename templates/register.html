@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block title %}Регистрация — Quotes{% endblock %}
@@ -15,7 +16,9 @@
             <input
                 type="text"
                 id="register-username"
-                placeholder="Username"
+                placeholder="Имя пользователя"
+                minlength="2"
+                maxlength="100"
                 required
             >
 
@@ -34,11 +37,9 @@
 
         </form>
 
-        <p id="register-message"></p>
-
         <p>
-            Нет аккаунта?
-            <a href="/users/register">Регистрация</a>
+            Уже есть аккаунт?
+            <a href="/users/login">Войти</a>
         </p>
 
     </div>

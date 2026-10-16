@@ -1,27 +1,20 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from services.rating_service import (
-    rate_quote,
-    get_quote_rating,
-    get_top_rated_quotes
-)
 
 from database.database import get_db
-
+from database.models import UserModel, QuoteRatingModel
+from dependencies.auth import get_current_user
 from schemas.rating import (
     RatingCreate,
     RatingResponse,
     RatingStats
 )
-
 from services.rating_service import (
     rate_quote,
     get_quote_rating,
     get_top_rated_quotes
 )
-from fastapi import Depends
-from database.models import UserModel
-from dependencies.auth import get_current_user
 
 
 router = APIRouter(
@@ -37,18 +30,17 @@ router = APIRouter(
 def rate(
     quote_id: int,
     data: RatingCreate,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-
     result = rate_quote(
         db,
         quote_id,
-        data.user_id,
+        current_user.id,
         data.rating
     )
 
     if result is None:
-
         raise HTTPException(
             status_code=404,
             detail="Quote not found."
@@ -65,7 +57,6 @@ def rating(
     quote_id: int,
     db: Session = Depends(get_db)
 ):
-
     return get_quote_rating(
         db,
         quote_id
@@ -78,14 +69,14 @@ def top_rated(
     min_votes: int = 5,
     db: Session = Depends(get_db)
 ):
-
     return get_top_rated_quotes(
         db,
         limit,
         min_votes
     )
 
-@router.get("/ratings/quotes/{quote_id}/user")
+
+@router.get("/quotes/{quote_id}/user")
 def get_user_rating(
     quote_id: int,
     current_user: UserModel = Depends(get_current_user),

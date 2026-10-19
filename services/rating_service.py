@@ -1,11 +1,8 @@
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from database.models import (
-    QuoteModel,
-    QuoteRatingModel
-)
-
+from database.models import QuoteModel, QuoteRatingModel
 from services.notification_service import notify_user
 
 
@@ -15,11 +12,11 @@ def rate_quote(
     user_id: int,
     rating: int
 ):
+    if rating < 1 or rating > 5:
+        raise ValueError("Rating must be between 1 and 5.")
 
     quote = (
-        db.query(
-            QuoteModel
-        )
+        db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
             QuoteModel.is_deleted == False
@@ -27,13 +24,11 @@ def rate_quote(
         .first()
     )
 
-    if not quote:
+    if quote is None:
         return None
 
     existing = (
-        db.query(
-            QuoteRatingModel
-        )
+        db.query(QuoteRatingModel)
         .filter(
             QuoteRatingModel.quote_id == quote_id,
             QuoteRatingModel.user_id == user_id
@@ -44,33 +39,23 @@ def rate_quote(
     is_new_rating = existing is None
 
     if existing:
-
         existing.rating = rating
-
     else:
-
-        new_rating = QuoteRatingModel(
-            user_id=user_id,
-            quote_id=quote_id,
-            rating=rating
-        )
-
         db.add(
-            new_rating
+            QuoteRatingModel(
+                user_id=user_id,
+                quote_id=quote_id,
+                rating=rating
+            )
         )
 
     db.commit()
 
-    # Уведомляем автора только о новой оценке.
-    # Изменение собственной оценки уведомление не создаёт.
     if (
         is_new_rating
-        and
-        quote.user_id is not None
-        and
-        quote.user_id != user_id
+        and quote.user_id is not None
+        and quote.user_id != user_id
     ):
-
         notify_user(
             db,
             quote.user_id,
@@ -79,29 +64,20 @@ def rate_quote(
             "rating"
         )
 
-    return get_quote_rating(
-        db,
-        quote_id
-    )
+    return get_quote_rating(db, quote_id)
 
 
 def get_quote_rating(
     db: Session,
     quote_id: int
 ):
-
     ratings = (
-        db.query(
-            QuoteRatingModel
-        )
-        .filter(
-            QuoteRatingModel.quote_id == quote_id
-        )
+        db.query(QuoteRatingModel.rating)
+        .filter(QuoteRatingModel.quote_id == quote_id)
         .all()
     )
 
     if not ratings:
-
         return {
             "average_rating": 0.0,
             "votes": 0,
@@ -112,52 +88,17 @@ def get_quote_rating(
             "one_star": 0
         }
 
-    total = sum(
-        item.rating
-        for item in ratings
-    )
-
-    votes = len(
-        ratings
-    )
+    values = [item.rating for item in ratings]
+    votes = len(values)
 
     return {
-        "average_rating": round(
-            total / votes,
-            2
-        ),
-
+        "average_rating": round(sum(values) / votes, 2),
         "votes": votes,
-
-        "five_stars": sum(
-            1
-            for item in ratings
-            if item.rating == 5
-        ),
-
-        "four_stars": sum(
-            1
-            for item in ratings
-            if item.rating == 4
-        ),
-
-        "three_stars": sum(
-            1
-            for item in ratings
-            if item.rating == 3
-        ),
-
-        "two_stars": sum(
-            1
-            for item in ratings
-            if item.rating == 2
-        ),
-
-        "one_star": sum(
-            1
-            for item in ratings
-            if item.rating == 1
-        )
+        "five_stars": values.count(5),
+        "four_stars": values.count(4),
+        "three_stars": values.count(3),
+        "two_stars": values.count(2),
+        "one_star": values.count(1)
     }
 
 
@@ -165,56 +106,32 @@ def get_top_rated_quotes(
     db: Session,
     limit: int = 10
 ):
-
     result = (
         db.query(
             QuoteModel,
-            func.avg(
-                QuoteRatingModel.rating
-            ).label("avg_rating"),
-            func.count(
-                QuoteRatingModel.id
-            ).label("votes")
+            func.avg(QuoteRatingModel.rating).label("avg_rating"),
+            func.count(QuoteRatingModel.id).label("votes")
         )
         .join(
             QuoteRatingModel,
             QuoteRatingModel.quote_id == QuoteModel.id
         )
-        .filter(
-            QuoteModel.is_deleted == False
-        )
-        .group_by(
-            QuoteModel.id
-        )
-        .having(
-            func.count(
-                QuoteRatingModel.id
-            ) >= 1
-        )
+        .filter(QuoteModel.is_deleted == False)
+        .group_by(QuoteModel.id)
         .order_by(
-            func.avg(
-                QuoteRatingModel.rating
-            ).desc(),
-            func.count(
-                QuoteRatingModel.id
-            ).desc()
+            func.avg(QuoteRatingModel.rating).desc(),
+            func.count(QuoteRatingModel.id).desc()
         )
-        .limit(
-            limit
-        )
+        .limit(limit)
         .all()
     )
 
     return [
         {
             "quote": quote,
-            "average_rating": round(
-                avg_rating,
-                2
-            ),
+            "average_rating": round(float(avg_rating), 2),
             "votes": votes
         }
-
         for quote, avg_rating, votes in result
     ]
 
@@ -224,65 +141,34 @@ def get_top_rated_quotes_min_votes(
     limit: int = 10,
     min_votes: int = 5
 ):
-
-    quotes = (
+    result = (
         db.query(
-            QuoteModel
+            QuoteModel,
+            func.avg(QuoteRatingModel.rating).label("avg_rating"),
+            func.count(QuoteRatingModel.id).label("votes")
         )
-        .filter(
-            QuoteModel.is_deleted == False
+        .join(
+            QuoteRatingModel,
+            QuoteRatingModel.quote_id == QuoteModel.id
         )
+        .filter(QuoteModel.is_deleted == False)
+        .group_by(QuoteModel.id)
+        .having(
+            func.count(QuoteRatingModel.id) >= min_votes
+        )
+        .order_by(
+            func.avg(QuoteRatingModel.rating).desc(),
+            func.count(QuoteRatingModel.id).desc()
+        )
+        .limit(limit)
         .all()
     )
 
-    result = []
-
-    for quote in quotes:
-
-        average = (
-            db.query(
-                func.avg(
-                    QuoteRatingModel.rating
-                )
-            )
-            .filter(
-                QuoteRatingModel.quote_id == quote.id
-            )
-            .scalar()
-        )
-
-        count = (
-            db.query(
-                func.count(
-                    QuoteRatingModel.id
-                )
-            )
-            .filter(
-                QuoteRatingModel.quote_id == quote.id
-            )
-            .scalar()
-        )
-
-        if count < min_votes:
-            continue
-
-        quote.average_rating = round(
-            average or 0,
-            2
-        )
-
-        quote.ratings_count = count
-
-        result.append(
-            quote
-        )
-
-    result.sort(
-        key=lambda quote: (
-            quote.average_rating,
-            quote.ratings_count
-        ),
-        reverse=True
-    )
-
-    return result[:limit]
+    return [
+        {
+            "quote": quote,
+            "average_rating": round(float(avg_rating), 2),
+            "votes": votes
+        }
+        for quote, avg_rating, votes in result
+    ]

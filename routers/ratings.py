@@ -13,7 +13,7 @@ from schemas.rating import (
 from services.rating_service import (
     rate_quote,
     get_quote_rating,
-    get_top_rated_quotes
+    get_top_rated_quotes_min_votes
 )
 
 
@@ -69,11 +69,12 @@ def top_rated(
     min_votes: int = 5,
     db: Session = Depends(get_db)
 ):
-    return get_top_rated_quotes(
+    return get_top_rated_quotes_min_votes(
         db,
         limit,
         min_votes
     )
+
 
 
 @router.get("/quotes/{quote_id}/user")

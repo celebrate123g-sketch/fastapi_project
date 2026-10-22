@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from database.database import get_db
@@ -16,17 +16,10 @@ from services.rating_service import (
     get_top_rated_quotes_min_votes
 )
 
-
-router = APIRouter(
-    prefix="/ratings",
-    tags=["Ratings"]
-)
+router = APIRouter(prefix="/ratings", tags=["Ratings"])
 
 
-@router.post(
-    "/quotes/{quote_id}",
-    response_model=RatingResponse
-)
+@router.post("/quotes/{quote_id}", response_model=RatingStats)
 def rate(
     quote_id: int,
     data: RatingCreate,
@@ -49,24 +42,18 @@ def rate(
     return result
 
 
-@router.get(
-    "/quotes/{quote_id}",
-    response_model=RatingStats
-)
+@router.get("/quotes/{quote_id}", response_model=RatingStats)
 def rating(
     quote_id: int,
     db: Session = Depends(get_db)
 ):
-    return get_quote_rating(
-        db,
-        quote_id
-    )
+    return get_quote_rating(db, quote_id)
 
 
 @router.get("/top")
 def top_rated(
-    limit: int = 10,
-    min_votes: int = 5,
+    limit: int = Query(default=10, ge=1, le=100),
+    min_votes: int = Query(default=5, ge=1),
     db: Session = Depends(get_db)
 ):
     return get_top_rated_quotes_min_votes(
@@ -74,7 +61,6 @@ def top_rated(
         limit,
         min_votes
     )
-
 
 
 @router.get("/quotes/{quote_id}/user")
@@ -93,10 +79,6 @@ def get_user_rating(
     )
 
     if rating is None:
-        return {
-            "rating": 0
-        }
+        return {"rating": 0}
 
-    return {
-        "rating": rating.rating
-    }
+    return {"rating": rating.rating}

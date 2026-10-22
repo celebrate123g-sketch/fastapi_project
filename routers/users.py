@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from fastapi.templating import Jinja2Templates
@@ -38,9 +39,7 @@ def create_user(
 ):
     existing_user = (
         db.query(UserModel)
-        .filter(
-            UserModel.username == user.username
-        )
+        .filter(UserModel.username == user.username)
         .first()
     )
 
@@ -64,9 +63,7 @@ def create_user(
     db.commit()
     db.refresh(new_user)
 
-    token = create_access_token(
-        new_user.id
-    )
+    token = create_access_token(new_user.id)
 
     return {
         "access_token": token,
@@ -76,14 +73,10 @@ def create_user(
 
 
 @router.get("/login")
-def login_page(
-    request: Request
-):
+def login_page(request: Request):
     return templates.TemplateResponse(
         "login.html",
-        {
-            "request": request
-        }
+        {"request": request}
     )
 
 
@@ -94,22 +87,20 @@ def login(
 ):
     existing_user = (
         db.query(UserModel)
-        .filter(
-            UserModel.username == user.username
-        )
+        .filter(UserModel.username == user.username)
         .first()
     )
 
-    if not existing_user:
+    if existing_user is None:
         raise HTTPException(
-            status_code=404,
-            detail="User not found."
+            status_code=401,
+            detail="Incorrect username or password."
         )
 
     if not existing_user.password_hash:
         raise HTTPException(
-            status_code=400,
-            detail="This account does not have a password."
+            status_code=401,
+            detail="Incorrect username or password."
         )
 
     password_correct = bcrypt.checkpw(
@@ -120,12 +111,10 @@ def login(
     if not password_correct:
         raise HTTPException(
             status_code=401,
-            detail="Incorrect password."
+            detail="Incorrect username or password."
         )
 
-    token = create_access_token(
-        existing_user.id
-    )
+    token = create_access_token(existing_user.id)
 
     return {
         "access_token": token,
@@ -135,61 +124,18 @@ def login(
 
 
 @router.get("/register")
-def register_page(
-    request: Request
-):
+def register_page(request: Request):
     return templates.TemplateResponse(
         "register.html",
-        {
-            "request": request
-        }
+        {"request": request}
     )
-
-
-@router.get(
-    "/",
-    response_model=list[UserResponse]
-)
-def get_users(
-    db: Session = Depends(get_db)
-):
-    return db.query(UserModel).all()
-
-
-@router.get(
-    "/{user_id}",
-    response_model=UserResponse
-)
-def get_user(
-    user_id: int,
-    db: Session = Depends(get_db)
-):
-    user = (
-        db.query(UserModel)
-        .filter(
-            UserModel.id == user_id
-        )
-        .first()
-    )
-
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found."
-        )
-
-    return user
 
 
 @router.get("/profile")
-def profile_page(
-    request: Request
-):
+def profile_page(request: Request):
     return templates.TemplateResponse(
         "profile.html",
-        {
-            "request": request
-        }
+        {"request": request}
     )
 
 
@@ -200,25 +146,19 @@ def profile_data(
 ):
     likes_count = (
         db.query(user_likes)
-        .filter(
-            user_likes.c.user_id == current_user.id
-        )
+        .filter(user_likes.c.user_id == current_user.id)
         .count()
     )
 
     favorites_count = (
         db.query(user_favorites)
-        .filter(
-            user_favorites.c.user_id == current_user.id
-        )
+        .filter(user_favorites.c.user_id == current_user.id)
         .count()
     )
 
     ratings_count = (
         db.query(QuoteRatingModel)
-        .filter(
-            QuoteRatingModel.user_id == current_user.id
-        )
+        .filter(QuoteRatingModel.user_id == current_user.id)
         .count()
     )
 
@@ -259,3 +199,32 @@ def update_profile(
     db.refresh(current_user)
 
     return current_user
+
+
+@router.get("/", response_model=list[UserResponse])
+def get_users(
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return db.query(UserModel).all()
+
+
+@router.get("/{user_id}", response_model=UserResponse)
+def get_user(
+    user_id: int,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user = (
+        db.query(UserModel)
+        .filter(UserModel.id == user_id)
+        .first()
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found."
+        )
+
+    return user

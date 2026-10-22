@@ -1,7 +1,9 @@
 
 import os
-import jwt
 from datetime import datetime, timedelta, timezone
+
+import jwt
+
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 
@@ -9,7 +11,6 @@ if not SECRET_KEY:
     raise RuntimeError("JWT_SECRET_KEY is not configured.")
 
 ALGORITHM = "HS256"
-
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 
@@ -37,6 +38,5 @@ def decode_access_token(token: str):
             SECRET_KEY,
             algorithms=[ALGORITHM]
         )
-
     except jwt.InvalidTokenError:
         return None

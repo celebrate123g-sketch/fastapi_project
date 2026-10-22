@@ -1,6 +1,7 @@
+
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class UserCreate(BaseModel):
@@ -13,6 +14,16 @@ class UserCreate(BaseModel):
         min_length=6,
         max_length=100
     )
+
+    @field_validator("username")
+    @classmethod
+    def clean_username(cls, value: str):
+        value = value.strip()
+
+        if len(value) < 2:
+            raise ValueError("Username must contain at least 2 characters.")
+
+        return value
 
 
 class UserLogin(BaseModel):
@@ -32,6 +43,16 @@ class UserUpdate(BaseModel):
         min_length=2,
         max_length=100
     )
+
+    @field_validator("username")
+    @classmethod
+    def clean_username(cls, value: str):
+        value = value.strip()
+
+        if len(value) < 2:
+            raise ValueError("Username must contain at least 2 characters.")
+
+        return value
 
 
 class UserResponse(BaseModel):

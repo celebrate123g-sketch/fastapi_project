@@ -71,28 +71,29 @@ def get_quote_rating(
     db: Session,
     quote_id: int
 ):
+    result = (
+        db.query(
+            func.avg(QuoteRatingModel.rating),
+            func.count(QuoteRatingModel.id),
+            func.sum(
+                (QuoteRatingModel.rating == 5).cast(db.bind.dialect.type_descriptor(func.count(QuoteRatingModel.id).type))
+            )
+        )
+        .filter(QuoteRatingModel.quote_id == quote_id)
+        .first()
+    )
+
     ratings = (
         db.query(QuoteRatingModel.rating)
         .filter(QuoteRatingModel.quote_id == quote_id)
         .all()
     )
 
-    if not ratings:
-        return {
-            "average_rating": 0.0,
-            "votes": 0,
-            "five_stars": 0,
-            "four_stars": 0,
-            "three_stars": 0,
-            "two_stars": 0,
-            "one_star": 0
-        }
-
     values = [item.rating for item in ratings]
     votes = len(values)
 
     return {
-        "average_rating": round(sum(values) / votes, 2),
+        "average_rating": round(sum(values) / votes, 2) if votes else 0.0,
         "votes": votes,
         "five_stars": values.count(5),
         "four_stars": values.count(4),

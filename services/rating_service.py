@@ -71,18 +71,6 @@ def get_quote_rating(
     db: Session,
     quote_id: int
 ):
-    result = (
-        db.query(
-            func.avg(QuoteRatingModel.rating),
-            func.count(QuoteRatingModel.id),
-            func.sum(
-                (QuoteRatingModel.rating == 5).cast(db.bind.dialect.type_descriptor(func.count(QuoteRatingModel.id).type))
-            )
-        )
-        .filter(QuoteRatingModel.quote_id == quote_id)
-        .first()
-    )
-
     ratings = (
         db.query(QuoteRatingModel.rating)
         .filter(QuoteRatingModel.quote_id == quote_id)
@@ -142,6 +130,12 @@ def get_top_rated_quotes_min_votes(
     limit: int = 10,
     min_votes: int = 5
 ):
+    if limit < 1:
+        raise ValueError("limit must be at least 1.")
+
+    if min_votes < 1:
+        raise ValueError("min_votes must be at least 1.")
+
     result = (
         db.query(
             QuoteModel,

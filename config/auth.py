@@ -15,6 +15,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 
 def create_access_token(user_id: int):
+    if not isinstance(user_id, int) or isinstance(user_id, bool) or user_id <= 0:
+        raise ValueError("user_id must be a positive integer.")
+
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )

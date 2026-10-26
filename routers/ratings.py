@@ -3,13 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from database.database import get_db
-from database.models import UserModel, QuoteRatingModel
+from database.models import UserModel, QuoteRatingModel, QuoteModel
 from dependencies.auth import get_current_user
-from schemas.rating import (
-    RatingCreate,
-    RatingResponse,
-    RatingStats
-)
+from schemas.rating import RatingCreate, RatingStats
 from services.rating_service import (
     rate_quote,
     get_quote_rating,
@@ -69,6 +65,18 @@ def get_user_rating(
     current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    quote = (
+        db.query(QuoteModel)
+        .filter(QuoteModel.id == quote_id)
+        .first()
+    )
+
+    if quote is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Quote not found."
+        )
+
     rating = (
         db.query(QuoteRatingModel)
         .filter(

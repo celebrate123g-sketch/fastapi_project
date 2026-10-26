@@ -17,6 +17,7 @@ from sqlalchemy.orm import (
 )
 
 from database.database import Base
+from sqlalchemy import UniqueConstraint
 
 quote_tags = Table(
     "quote_tags",
@@ -575,6 +576,44 @@ class ReportModel(Base):
 class QuoteRatingModel(Base):
 
     __tablename__ = "quote_ratings"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    quote_id: Mapped[int] = mapped_column(
+        ForeignKey("quotes.id"),
+        nullable=False
+    )
+
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True
+    )
+
+    rating: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    quote: Mapped["QuoteModel"] = relationship(
+        back_populates="ratings"
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "quote_id",
+            "user_id",
+            name="uq_quote_rating_user"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(
         Integer,

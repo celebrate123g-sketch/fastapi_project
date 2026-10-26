@@ -32,7 +32,7 @@ def get_current_user(
 
     user_id = payload.get("user_id")
 
-    if user_id is None:
+    if not isinstance(user_id, int) or isinstance(user_id, bool) or user_id <= 0:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload.",

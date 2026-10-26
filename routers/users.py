@@ -1,7 +1,8 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 import bcrypt
 
@@ -13,13 +14,13 @@ from database.models import (
     user_favorites,
     QuoteRatingModel
 )
+from dependencies.auth import get_current_user
 from schemas.user import (
     UserCreate,
     UserLogin,
     UserResponse,
     UserUpdate
 )
-from dependencies.auth import get_current_user
 
 
 router = APIRouter(
@@ -60,8 +61,16 @@ def create_user(
     )
 
     db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+
+    try:
+        db.commit()
+        db.refresh(new_user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Username already exists."
+        )
 
     token = create_access_token(new_user.id)
 
@@ -91,24 +100,14 @@ def login(
         .first()
     )
 
-    if existing_user is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Incorrect username or password."
+    if (
+        existing_user is None
+        or not existing_user.password_hash
+        or not bcrypt.checkpw(
+            user.password.encode(),
+            existing_user.password_hash.encode()
         )
-
-    if not existing_user.password_hash:
-        raise HTTPException(
-            status_code=401,
-            detail="Incorrect username or password."
-        )
-
-    password_correct = bcrypt.checkpw(
-        user.password.encode(),
-        existing_user.password_hash.encode()
-    )
-
-    if not password_correct:
+    ):
         raise HTTPException(
             status_code=401,
             detail="Incorrect username or password."
@@ -195,8 +194,15 @@ def update_profile(
 
     current_user.username = user.username
 
-    db.commit()
-    db.refresh(current_user)
+    try:
+        db.commit()
+        db.refresh(current_user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Username already exists."
+        )
 
     return current_user
 

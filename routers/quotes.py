@@ -1,7 +1,7 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.orm import Session
 from fastapi.templating import Jinja2Templates
 
@@ -51,13 +51,13 @@ def home():
 @router.post("/quotes")
 def add_quote(
     quote: QuoteCreate,
-    user_id: int,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return create_quote(
         db,
         quote,
-        user_id
+        current_user.id
     )
 
 
@@ -83,8 +83,17 @@ def read_quote(
 def edit_quote(
     quote_id: int,
     quote: QuoteUpdate,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    existing_quote = get_quote_by_id(db, quote_id)
+
+    if existing_quote.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only edit your own quotes."
+        )
+
     return update_quote(
         db,
         quote_id,
@@ -95,8 +104,17 @@ def edit_quote(
 @router.delete("/quotes/{quote_id}")
 def remove_quote(
     quote_id: int,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    existing_quote = get_quote_by_id(db, quote_id)
+
+    if existing_quote.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only delete your own quotes."
+        )
+
     return delete_quote(
         db,
         quote_id

@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from database.init_db import create_tables
+from database.database import migrate_user_role
 
 from routers.quotes import router as quotes_router
 from routers.comments import router as comments_router
@@ -28,6 +29,7 @@ from routers import recommendations
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_tables()
+    migrate_user_role()
     yield
 
 

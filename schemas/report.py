@@ -1,3 +1,4 @@
+
 from datetime import datetime
 from enum import Enum
 
@@ -21,7 +22,6 @@ class ReportStatus(str, Enum):
 
 class ReportCreate(BaseModel):
     quote_id: int
-    user_id: int
     reason: ReportReason
     description: str | None = None
 

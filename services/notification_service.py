@@ -1,33 +1,26 @@
-from fastapi import HTTPException
 
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from database.models import NotificationModel
-
 from schemas.notification import NotificationCreate
 
 
 def create_notification(
     db: Session,
-    notification: NotificationCreate
+    notification: NotificationCreate,
+    user_id: int
 ):
-
     new_notification = NotificationModel(
-        user_id=notification.user_id,
+        user_id=user_id,
         title=notification.title,
         message=notification.message,
         notification_type=notification.notification_type
     )
 
-    db.add(
-        new_notification
-    )
-
+    db.add(new_notification)
     db.commit()
-
-    db.refresh(
-        new_notification
-    )
+    db.refresh(new_notification)
 
     return new_notification
 
@@ -39,9 +32,7 @@ def notify_user(
     message: str,
     notification_type: str
 ):
-
     notification = NotificationCreate(
-        user_id=user_id,
         title=title,
         message=message,
         notification_type=notification_type
@@ -49,7 +40,8 @@ def notify_user(
 
     return create_notification(
         db,
-        notification
+        notification,
+        user_id
     )
 
 
@@ -59,17 +51,10 @@ def get_notifications(
     skip: int = 0,
     limit: int = 20
 ):
-
     return (
-        db.query(
-            NotificationModel
-        )
-        .filter(
-            NotificationModel.user_id == user_id
-        )
-        .order_by(
-            NotificationModel.created_at.desc()
-        )
+        db.query(NotificationModel)
+        .filter(NotificationModel.user_id == user_id)
+        .order_by(NotificationModel.created_at.desc())
         .offset(skip)
         .limit(limit)
         .all()
@@ -81,17 +66,10 @@ def get_recent_notifications(
     user_id: int,
     limit: int = 10
 ):
-
     return (
-        db.query(
-            NotificationModel
-        )
-        .filter(
-            NotificationModel.user_id == user_id
-        )
-        .order_by(
-            NotificationModel.created_at.desc()
-        )
+        db.query(NotificationModel)
+        .filter(NotificationModel.user_id == user_id)
+        .order_by(NotificationModel.created_at.desc())
         .limit(limit)
         .all()
     )
@@ -101,18 +79,13 @@ def get_unread_notifications(
     db: Session,
     user_id: int
 ):
-
     return (
-        db.query(
-            NotificationModel
-        )
+        db.query(NotificationModel)
         .filter(
             NotificationModel.user_id == user_id,
-            NotificationModel.is_read == False
+            NotificationModel.is_read.is_(False)
         )
-        .order_by(
-            NotificationModel.created_at.desc()
-        )
+        .order_by(NotificationModel.created_at.desc())
         .all()
     )
 
@@ -121,14 +94,11 @@ def get_unread_count(
     db: Session,
     user_id: int
 ):
-
     return (
-        db.query(
-            NotificationModel
-        )
+        db.query(NotificationModel)
         .filter(
             NotificationModel.user_id == user_id,
-            NotificationModel.is_read == False
+            NotificationModel.is_read.is_(False)
         )
         .count()
     )
@@ -139,11 +109,8 @@ def mark_as_read(
     user_id: int,
     notification_id: int
 ):
-
     notification = (
-        db.query(
-            NotificationModel
-        )
+        db.query(NotificationModel)
         .filter(
             NotificationModel.id == notification_id,
             NotificationModel.user_id == user_id
@@ -152,7 +119,6 @@ def mark_as_read(
     )
 
     if notification is None:
-
         raise HTTPException(
             status_code=404,
             detail="Notification not found."
@@ -161,10 +127,7 @@ def mark_as_read(
     notification.is_read = True
 
     db.commit()
-
-    db.refresh(
-        notification
-    )
+    db.refresh(notification)
 
     return notification
 
@@ -173,25 +136,17 @@ def mark_all_as_read(
     db: Session,
     user_id: int
 ):
-
-    notifications = (
-        db.query(
-            NotificationModel
-        )
+    count = (
+        db.query(NotificationModel)
         .filter(
             NotificationModel.user_id == user_id,
-            NotificationModel.is_read == False
+            NotificationModel.is_read.is_(False)
         )
-        .all()
+        .update(
+            {NotificationModel.is_read: True},
+            synchronize_session=False
+        )
     )
-
-    count = len(
-        notifications
-    )
-
-    for notification in notifications:
-
-        notification.is_read = True
 
     db.commit()
 
@@ -206,11 +161,8 @@ def delete_notification(
     user_id: int,
     notification_id: int
 ):
-
     notification = (
-        db.query(
-            NotificationModel
-        )
+        db.query(NotificationModel)
         .filter(
             NotificationModel.id == notification_id,
             NotificationModel.user_id == user_id
@@ -219,16 +171,12 @@ def delete_notification(
     )
 
     if notification is None:
-
         raise HTTPException(
             status_code=404,
             detail="Notification not found."
         )
 
-    db.delete(
-        notification
-    )
-
+    db.delete(notification)
     db.commit()
 
     return {
@@ -240,26 +188,11 @@ def delete_all_notifications(
     db: Session,
     user_id: int
 ):
-
-    notifications = (
-        db.query(
-            NotificationModel
-        )
-        .filter(
-            NotificationModel.user_id == user_id
-        )
-        .all()
+    count = (
+        db.query(NotificationModel)
+        .filter(NotificationModel.user_id == user_id)
+        .delete(synchronize_session=False)
     )
-
-    count = len(
-        notifications
-    )
-
-    for notification in notifications:
-
-        db.delete(
-            notification
-        )
 
     db.commit()
 

@@ -1,3 +1,4 @@
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -6,6 +7,8 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from database.database import get_db
+from database.models import UserModel
+from dependencies.auth import get_current_user, get_admin_user
 
 from schemas.report import (
     ReportCreate,
@@ -25,6 +28,7 @@ from services.report_service import (
     get_report_statistics
 )
 
+
 router = APIRouter(
     prefix="/reports",
     tags=["Reports"]
@@ -37,16 +41,16 @@ router = APIRouter(
 )
 def report(
     data: ReportCreate,
+    current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-
     result = create_report(
         db,
-        data
+        data,
+        current_user.id
     )
 
     if result is None:
-
         raise HTTPException(
             status_code=404,
             detail="Quote not found."
@@ -60,9 +64,9 @@ def report(
     response_model=list[ReportResponse]
 )
 def reports(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
-
     return get_all_reports(db)
 
 
@@ -71,9 +75,9 @@ def reports(
     response_model=ReportStats
 )
 def statistics(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
-
     return get_report_statistics(db)
 
 
@@ -83,16 +87,15 @@ def statistics(
 )
 def report_by_id(
     report_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
-
     report = get_report(
         db,
         report_id
     )
 
     if report is None:
-
         raise HTTPException(
             status_code=404,
             detail="Report not found."
@@ -107,9 +110,9 @@ def report_by_id(
 )
 def reports_by_quote(
     quote_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
-
     return get_reports_by_quote(
         db,
         quote_id
@@ -122,9 +125,9 @@ def reports_by_quote(
 )
 def reports_by_user(
     user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
-
     return get_reports_by_user(
         db,
         user_id
@@ -137,16 +140,15 @@ def reports_by_user(
 )
 def approve(
     report_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
-
     report = approve_report(
         db,
         report_id
     )
 
     if report is None:
-
         raise HTTPException(
             status_code=404,
             detail="Report not found."
@@ -161,16 +163,15 @@ def approve(
 )
 def reject(
     report_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
-
     report = reject_report(
         db,
         report_id
     )
 
     if report is None:
-
         raise HTTPException(
             status_code=404,
             detail="Report not found."
@@ -184,16 +185,15 @@ def reject(
 )
 def delete(
     report_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
-
     deleted = delete_report(
         db,
         report_id
     )
 
     if not deleted:
-
         raise HTTPException(
             status_code=404,
             detail="Report not found."

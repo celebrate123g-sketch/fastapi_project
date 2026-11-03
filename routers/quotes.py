@@ -7,7 +7,7 @@ from fastapi.templating import Jinja2Templates
 
 from database.database import get_db
 from database.models import UserModel, user_likes, user_favorites
-from dependencies.auth import get_current_user
+from dependencies.auth import get_current_user, get_admin_user
 from schemas.quote import QuoteCreate, QuoteUpdate
 
 from services.quote_service import (
@@ -265,6 +265,7 @@ def search(
 
 @router.get("/trash")
 def trash(
+    current_user: UserModel = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     return get_deleted_quotes(db)
@@ -273,6 +274,7 @@ def trash(
 @router.put("/trash/{quote_id}/restore")
 def restore(
     quote_id: int,
+    current_user: UserModel = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     return restore_quote(
@@ -284,6 +286,7 @@ def restore(
 @router.delete("/trash/{quote_id}/force")
 def force_delete(
     quote_id: int,
+    current_user: UserModel = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     return force_delete_quote(
@@ -294,6 +297,7 @@ def force_delete(
 
 @router.delete("/trash")
 def empty_trash(
+    current_user: UserModel = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     return clear_trash(db)
@@ -301,6 +305,7 @@ def empty_trash(
 
 @router.put("/trash/restore-all")
 def restore_all(
+    current_user: UserModel = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     return restore_all_quotes(db)

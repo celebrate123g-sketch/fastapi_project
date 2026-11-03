@@ -1,7 +1,10 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database.database import get_db
+from database.models import UserModel
+from dependencies.auth import get_current_user, get_admin_user
 
 from schemas.history import (
     QuoteHistoryResponse,
@@ -32,13 +35,10 @@ router = APIRouter(
 )
 def recent_history(
     limit: int = 20,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
-
-    return get_recent_history(
-        db,
-        limit
-    )
+    return get_recent_history(db, limit)
 
 
 @router.get(
@@ -47,13 +47,16 @@ def recent_history(
 )
 def user_history(
     user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
 ):
+    if current_user.role != "admin" and current_user.id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You cannot view another user's history."
+        )
 
-    return get_user_history(
-        db,
-        user_id
-    )
+    return get_user_history(db, user_id)
 
 
 @router.get(
@@ -61,13 +64,12 @@ def user_history(
     response_model=LastViewedQuote
 )
 def last_viewed(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
 ):
-
-    history = get_last_viewed(db)
+    history = get_last_viewed(db, current_user.id)
 
     if history is None:
-
         raise HTTPException(
             status_code=404,
             detail="History is empty."
@@ -82,13 +84,16 @@ def last_viewed(
 )
 def clear_history(
     user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
 ):
+    if current_user.role != "admin" and current_user.id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You cannot clear another user's history."
+        )
 
-    return clear_user_history(
-        db,
-        user_id
-    )
+    return clear_user_history(db, user_id)
 
 
 @router.get(
@@ -96,13 +101,10 @@ def clear_history(
 )
 def most_viewed(
     limit: int = 10,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
-
-    return get_most_viewed(
-        db,
-        limit
-    )
+    return get_most_viewed(db, limit)
 
 
 @router.get(
@@ -110,9 +112,7 @@ def most_viewed(
     response_model=HistoryStatistics
 )
 def statistics(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
-
-    return get_history_statistics(
-        db
-    )
+    return get_history_statistics(db)

@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from database.database import get_db
+from database.models import UserModel
+from dependencies.auth import get_current_user, get_admin_user
 
 from schemas.notification import (
     NotificationCreate,
@@ -33,7 +36,8 @@ router = APIRouter(
 )
 def add_notification(
     notification: NotificationCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
     return create_notification(
         db,
@@ -46,14 +50,14 @@ def add_notification(
     response_model=list[NotificationResponse]
 )
 def notifications(
-    user_id: int,
-    skip: int = 0,
-    limit: int = 20,
-    db: Session = Depends(get_db)
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
 ):
     return get_notifications(
         db,
-        user_id,
+        current_user.id,
         skip,
         limit
     )
@@ -64,13 +68,13 @@ def notifications(
     response_model=list[NotificationResponse]
 )
 def recent_notifications(
-    user_id: int,
-    limit: int = 10,
-    db: Session = Depends(get_db)
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
 ):
     return get_recent_notifications(
         db,
-        user_id,
+        current_user.id,
         limit
     )
 
@@ -80,12 +84,12 @@ def recent_notifications(
     response_model=list[NotificationResponse]
 )
 def unread_notifications(
-    user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
 ):
     return get_unread_notifications(
         db,
-        user_id
+        current_user.id
     )
 
 
@@ -93,13 +97,13 @@ def unread_notifications(
     "/unread/count"
 )
 def unread_notifications_count(
-    user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
 ):
     return {
         "count": get_unread_count(
             db,
-            user_id
+            current_user.id
         )
     }
 
@@ -110,12 +114,12 @@ def unread_notifications_count(
 )
 def read_notification(
     notification_id: int,
-    user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
 ):
     return mark_as_read(
         db,
-        user_id,
+        current_user.id,
         notification_id
     )
 
@@ -124,12 +128,12 @@ def read_notification(
     "/read-all"
 )
 def read_all_notifications(
-    user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
 ):
     return mark_all_as_read(
         db,
-        user_id
+        current_user.id
     )
 
 
@@ -138,12 +142,12 @@ def read_all_notifications(
 )
 def remove_notification(
     notification_id: int,
-    user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
 ):
     return delete_notification(
         db,
-        user_id,
+        current_user.id,
         notification_id
     )
 
@@ -152,10 +156,10 @@ def remove_notification(
     ""
 )
 def remove_all_notifications(
-    user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
 ):
     return delete_all_notifications(
         db,
-        user_id
+        current_user.id
     )

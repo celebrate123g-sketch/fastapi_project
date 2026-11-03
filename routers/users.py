@@ -14,7 +14,7 @@ from database.models import (
     user_favorites,
     QuoteRatingModel
 )
-from dependencies.auth import get_current_user
+from dependencies.auth import get_current_user, get_admin_user
 from schemas.user import (
     UserCreate,
     UserLogin,
@@ -77,7 +77,7 @@ def create_user(
     return {
         "access_token": token,
         "token_type": "bearer",
-        "user": new_user
+        "user": UserResponse.model_validate(new_user)
     }
 
 
@@ -118,7 +118,7 @@ def login(
     return {
         "access_token": token,
         "token_type": "bearer",
-        "user": existing_user
+        "user": UserResponse.model_validate(existing_user)
     }
 
 
@@ -204,12 +204,12 @@ def update_profile(
             detail="Username already exists."
         )
 
-    return current_user
+    return UserResponse.model_validate(current_user)
 
 
 @router.get("/", response_model=list[UserResponse])
 def get_users(
-    current_user: UserModel = Depends(get_current_user),
+    current_user: UserModel = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     return db.query(UserModel).all()
@@ -221,6 +221,12 @@ def get_user(
     current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    if current_user.id != user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="You can only view your own profile."
+        )
+
     user = (
         db.query(UserModel)
         .filter(UserModel.id == user_id)

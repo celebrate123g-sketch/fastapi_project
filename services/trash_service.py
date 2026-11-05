@@ -1,19 +1,19 @@
-from datetime import datetime
+
+from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
 
 from database.models import QuoteModel
 
-from datetime import timedelta
 
-def get_trash(
-    db: Session
-):
+AUTO_DELETE_DAYS = 30
 
+
+def get_trash(db: Session):
     return (
         db.query(QuoteModel)
         .filter(
-            QuoteModel.is_deleted == True
+            QuoteModel.is_deleted.is_(True)
         )
         .order_by(
             QuoteModel.deleted_at.desc()
@@ -26,12 +26,11 @@ def get_deleted_quote(
     db: Session,
     quote_id: int
 ):
-
     return (
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == True
+            QuoteModel.is_deleted.is_(True)
         )
         .first()
     )
@@ -41,12 +40,11 @@ def move_to_trash(
     db: Session,
     quote_id: int
 ):
-
     quote = (
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .first()
     )
@@ -67,11 +65,7 @@ def restore_quote(
     db: Session,
     quote_id: int
 ):
-
-    quote = get_deleted_quote(
-        db,
-        quote_id
-    )
+    quote = get_deleted_quote(db, quote_id)
 
     if quote is None:
         return None
@@ -89,11 +83,7 @@ def delete_forever(
     db: Session,
     quote_id: int
 ):
-
-    quote = get_deleted_quote(
-        db,
-        quote_id
-    )
+    quote = get_deleted_quote(db, quote_id)
 
     if quote is None:
         return False
@@ -104,17 +94,17 @@ def delete_forever(
     return True
 
 
-def empty_trash(
-    db: Session
-):
-
-    (
+def empty_trash(db: Session):
+    quotes = (
         db.query(QuoteModel)
         .filter(
-            QuoteModel.is_deleted == True
+            QuoteModel.is_deleted.is_(True)
         )
-        .delete()
+        .all()
     )
+
+    for quote in quotes:
+        db.delete(quote)
 
     db.commit()
 
@@ -122,37 +112,30 @@ def empty_trash(
         "message": "Trash emptied successfully."
     }
 
-AUTO_DELETE_DAYS = 30
-
 
 def auto_delete_old_quotes(
     db: Session,
     days: int = AUTO_DELETE_DAYS
 ):
+    if days < 0:
+        raise ValueError("Days cannot be negative.")
 
-    border = datetime.utcnow() - timedelta(
-        days=days
-    )
+    border = datetime.utcnow() - timedelta(days=days)
 
     quotes = (
         db.query(QuoteModel)
         .filter(
-            QuoteModel.is_deleted == True,
-            QuoteModel.deleted_at != None,
+            QuoteModel.is_deleted.is_(True),
+            QuoteModel.deleted_at.isnot(None),
             QuoteModel.deleted_at <= border
         )
         .all()
     )
 
-    deleted = 0
+    deleted = len(quotes)
 
     for quote in quotes:
-
-        db.delete(
-            quote
-        )
-
-        deleted += 1
+        db.delete(quote)
 
     db.commit()
 

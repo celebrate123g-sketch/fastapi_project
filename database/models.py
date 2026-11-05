@@ -569,3 +569,19 @@ class QuoteRatingModel(Base):
             name="uq_quote_rating_user"
         ),
     )
+
+
+class CommentModel(Base):
+    __tablename__ = "comments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    quote_id: Mapped[int] = mapped_column(ForeignKey("quotes.id"))
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    author: Mapped[str] = mapped_column(String(100), nullable=False)
+    text: Mapped[str] = mapped_column(String(1000), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    quote: Mapped["QuoteModel"] = relationship(back_populates="comments")
+    user: Mapped["UserModel | None"] = relationship()
+
+

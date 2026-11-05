@@ -1,9 +1,8 @@
-from fastapi import HTTPException
 
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from database.models import QuoteModel
-
 from services.duplicate_service import calculate_similarity
 
 
@@ -13,18 +12,28 @@ def get_similar_quotes(
     limit: int = 5,
     min_similarity: float = 30
 ):
+    if limit < 1 or limit > 100:
+        raise HTTPException(
+            status_code=400,
+            detail="Limit must be between 1 and 100."
+        )
+
+    if min_similarity < 0 or min_similarity > 100:
+        raise HTTPException(
+            status_code=400,
+            detail="Minimum similarity must be between 0 and 100."
+        )
 
     original = (
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .first()
     )
 
     if original is None:
-
         raise HTTPException(
             status_code=404,
             detail="Quote not found."
@@ -34,7 +43,7 @@ def get_similar_quotes(
         db.query(QuoteModel)
         .filter(
             QuoteModel.id != quote_id,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .all()
     )
@@ -42,7 +51,6 @@ def get_similar_quotes(
     result = []
 
     for quote in quotes:
-
         similarity = calculate_similarity(
             original.text,
             quote.text
@@ -54,27 +62,18 @@ def get_similar_quotes(
         if quote.author == original.author:
             similarity += 5
 
-        similarity = min(
-            similarity,
-            100
-        )
+        similarity = min(similarity, 100)
 
         if similarity >= min_similarity:
-
-            result.append(
-                {
-                    "id": quote.id,
-                    "author": quote.author,
-                    "text": quote.text,
-                    "category": quote.category,
-                    "likes": quote.likes,
-                    "views": quote.views,
-                    "similarity": round(
-                        similarity,
-                        2
-                    )
-                }
-            )
+            result.append({
+                "id": quote.id,
+                "author": quote.author,
+                "text": quote.text,
+                "category": quote.category,
+                "likes": quote.likes,
+                "views": quote.views,
+                "similarity": round(similarity, 2)
+            })
 
     result.sort(
         key=lambda item: item["similarity"],

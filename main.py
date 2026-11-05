@@ -48,7 +48,7 @@ app.mount(
     StaticFiles(directory="uploads"),
     name="uploads"
 )
-
+migrate_comment_user_id()
 app.include_router(quotes_router)
 app.include_router(comments_router)
 app.include_router(logs_router)

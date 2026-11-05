@@ -1,4 +1,4 @@
-
+from sqlalchemy import text
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
@@ -42,3 +42,14 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def migrate_comment_user_id():
+    with engine.begin() as conn:
+        columns = conn.execute(text("PRAGMA table_info(comments)")).fetchall()
+        column_names = [column[1] for column in columns]
+
+        if "user_id" not in column_names:
+            conn.execute(
+                text("ALTER TABLE comments ADD COLUMN user_id INTEGER REFERENCES users(id)")
+            )

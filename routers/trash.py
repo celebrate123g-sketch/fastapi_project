@@ -1,3 +1,4 @@
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -6,6 +7,7 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from database.database import get_db
+from dependencies.auth import get_admin_user
 
 from schemas.trash import (
     TrashQuoteResponse,
@@ -31,9 +33,9 @@ router = APIRouter(
     response_model=list[TrashQuoteResponse]
 )
 def trash(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_admin_user)
 ):
-
     return get_trash(db)
 
 
@@ -43,16 +45,12 @@ def trash(
 )
 def deleted_quote(
     quote_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_admin_user)
 ):
-
-    quote = get_deleted_quote(
-        db,
-        quote_id
-    )
+    quote = get_deleted_quote(db, quote_id)
 
     if quote is None:
-
         raise HTTPException(
             status_code=404,
             detail="Quote not found in trash."
@@ -67,16 +65,12 @@ def deleted_quote(
 )
 def restore(
     quote_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_admin_user)
 ):
-
-    quote = restore_quote(
-        db,
-        quote_id
-    )
+    quote = restore_quote(db, quote_id)
 
     if quote is None:
-
         raise HTTPException(
             status_code=404,
             detail="Quote not found in trash."
@@ -91,16 +85,12 @@ def restore(
 )
 def delete(
     quote_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_admin_user)
 ):
-
-    deleted = delete_forever(
-        db,
-        quote_id
-    )
+    deleted = delete_forever(db, quote_id)
 
     if not deleted:
-
         raise HTTPException(
             status_code=404,
             detail="Quote not found in trash."
@@ -116,7 +106,7 @@ def delete(
     response_model=TrashResponse
 )
 def clear(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_admin_user)
 ):
-
     return empty_trash(db)

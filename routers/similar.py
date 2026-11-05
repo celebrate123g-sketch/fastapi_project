@@ -1,6 +1,8 @@
+
 from fastapi import (
     APIRouter,
-    Depends
+    Depends,
+    Query
 )
 
 from sqlalchemy.orm import Session
@@ -27,11 +29,10 @@ router = APIRouter(
 )
 def similar_quotes(
     quote_id: int,
-    limit: int = 5,
-    min_similarity: float = 30,
+    limit: int = Query(default=5, ge=1, le=100),
+    min_similarity: float = Query(default=30, ge=0, le=100),
     db: Session = Depends(get_db)
 ):
-
     return get_similar_quotes(
         db=db,
         quote_id=quote_id,

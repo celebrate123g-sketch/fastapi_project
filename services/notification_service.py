@@ -51,6 +51,9 @@ def get_notifications(
     skip: int = 0,
     limit: int = 20
 ):
+    skip = max(0, skip)
+    limit = max(1, min(limit, 100))
+
     return (
         db.query(NotificationModel)
         .filter(NotificationModel.user_id == user_id)
@@ -66,6 +69,8 @@ def get_recent_notifications(
     user_id: int,
     limit: int = 10
 ):
+    limit = max(1, min(limit, 100))
+
     return (
         db.query(NotificationModel)
         .filter(NotificationModel.user_id == user_id)

@@ -2,15 +2,9 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from database.models import (
-    QuoteModel,
-    ReportModel
-)
+from database.models import QuoteModel, ReportModel
 
-from schemas.report import (
-    ReportCreate,
-    ReportStatus
-)
+from schemas.report import ReportCreate, ReportStatus
 
 from services.notification_service import notify_user
 
@@ -22,7 +16,10 @@ def create_report(
 ):
     quote = (
         db.query(QuoteModel)
-        .filter(QuoteModel.id == data.quote_id)
+        .filter(
+            QuoteModel.id == data.quote_id,
+            QuoteModel.is_deleted.is_(False)
+        )
         .first()
     )
 
@@ -95,7 +92,7 @@ def approve_report(
 ):
     report = get_report(db, report_id)
 
-    if report is None:
+    if report is None or report.status != ReportStatus.pending.value:
         return None
 
     report.status = ReportStatus.approved.value
@@ -127,7 +124,7 @@ def reject_report(
 ):
     report = get_report(db, report_id)
 
-    if report is None:
+    if report is None or report.status != ReportStatus.pending.value:
         return None
 
     report.status = ReportStatus.rejected.value

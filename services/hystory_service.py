@@ -22,6 +22,7 @@ def save_quote_history(
 
     db.add(history)
     db.commit()
+    db.refresh(history)
 
     return history
 
@@ -48,6 +49,7 @@ def get_user_history(
         db.query(QuoteViewModel)
         .filter(QuoteViewModel.user_id == user_id)
         .order_by(desc(QuoteViewModel.created_at))
+        .limit(1000)
         .all()
     )
 
@@ -85,7 +87,7 @@ def clear_user_history(
     (
         db.query(QuoteViewModel)
         .filter(QuoteViewModel.user_id == user_id)
-        .delete()
+        .delete(synchronize_session=False)
     )
 
     db.commit()
@@ -103,6 +105,7 @@ def get_most_viewed(
 
     return (
         db.query(QuoteModel)
+        .filter(QuoteModel.is_deleted.is_(False))
         .order_by(desc(QuoteModel.views))
         .limit(limit)
         .all()

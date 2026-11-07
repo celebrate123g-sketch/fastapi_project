@@ -75,7 +75,7 @@ def get_all_quotes(
     sort: str = "newest"
 ):
     query = db.query(QuoteModel).filter(
-        QuoteModel.is_deleted == False
+        QuoteModel.is_deleted.is_(False)
     )
 
     if sort == "newest":
@@ -109,7 +109,7 @@ def get_all_quotes(
 def get_random_quote(db: Session):
     quote = (
         db.query(QuoteModel)
-        .filter(QuoteModel.is_deleted == False)
+        .filter(QuoteModel.is_deleted.is_(False))
         .order_by(func.random())
         .first()
     )
@@ -128,7 +128,7 @@ def get_quote_by_id(db: Session, quote_id: int):
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .first()
     )
@@ -147,7 +147,7 @@ def increment_views(db: Session, quote_id: int):
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .first()
     )
@@ -212,7 +212,7 @@ def update_quote(
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .first()
     )
@@ -260,7 +260,7 @@ def delete_quote(db: Session, quote_id: int):
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .first()
     )
@@ -290,7 +290,7 @@ def get_quotes_by_category(db: Session, category: str):
         db.query(QuoteModel)
         .filter(
             QuoteModel.category == category,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .all()
     )
@@ -307,7 +307,7 @@ def get_favorite_quotes(db: Session, user_id: int):
         )
         .filter(
             user_favorites.c.user_id == user_id,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .all()
     )
@@ -336,7 +336,7 @@ def add_to_favorites(
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .first()
     )
@@ -377,7 +377,7 @@ def remove_from_favorites(
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .first()
     )
@@ -430,7 +430,7 @@ def like_quote(
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .first()
     )
@@ -474,7 +474,7 @@ def unlike_quote(
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .first()
     )
@@ -514,7 +514,7 @@ def unlike_quote(
 def get_most_viewed_quotes(db: Session):
     quotes = (
         db.query(QuoteModel)
-        .filter(QuoteModel.is_deleted == False)
+        .filter(QuoteModel.is_deleted.is_(False))
         .order_by(desc(QuoteModel.views))
         .all()
     )
@@ -529,7 +529,7 @@ def count_search_quotes(
     category: str | None = None
 ):
     query = db.query(QuoteModel).filter(
-        QuoteModel.is_deleted == False
+        QuoteModel.is_deleted.is_(False)
     )
 
     if author:
@@ -560,7 +560,7 @@ def search_quotes(
     limit: int = 10
 ):
     query = db.query(QuoteModel).filter(
-        QuoteModel.is_deleted == False
+        QuoteModel.is_deleted.is_(False)
     )
 
     if author:
@@ -610,7 +610,7 @@ def search_quotes(
 def get_trending_quotes(db: Session):
     quotes = (
         db.query(QuoteModel)
-        .filter(QuoteModel.is_deleted == False)
+        .filter(QuoteModel.is_deleted.is_(False))
         .all()
     )
 
@@ -632,7 +632,7 @@ def get_trending_quotes(db: Session):
 def get_deleted_quotes(db: Session):
     quotes = (
         db.query(QuoteModel)
-        .filter(QuoteModel.is_deleted == True)
+        .filter(QuoteModel.is_deleted.is_(True))
         .order_by(desc(QuoteModel.deleted_at))
         .all()
     )
@@ -645,7 +645,7 @@ def restore_quote(db: Session, quote_id: int):
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == True
+            QuoteModel.is_deleted.is_(True)
         )
         .first()
     )
@@ -674,7 +674,7 @@ def force_delete_quote(db: Session, quote_id: int):
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == True
+            QuoteModel.is_deleted.is_(True)
         )
         .first()
     )
@@ -698,7 +698,7 @@ def force_delete_quote(db: Session, quote_id: int):
 def clear_trash(db: Session):
     quotes = (
         db.query(QuoteModel)
-        .filter(QuoteModel.is_deleted == True)
+        .filter(QuoteModel.is_deleted.is_(True))
         .all()
     )
 
@@ -719,7 +719,7 @@ def clear_trash(db: Session):
 def restore_all_quotes(db: Session):
     quotes = (
         db.query(QuoteModel)
-        .filter(QuoteModel.is_deleted == True)
+        .filter(QuoteModel.is_deleted.is_(True))
         .all()
     )
 

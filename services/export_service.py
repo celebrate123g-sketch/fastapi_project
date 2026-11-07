@@ -1,3 +1,4 @@
+
 import csv
 import json
 import os
@@ -13,7 +14,11 @@ os.makedirs(EXPORT_DIR, exist_ok=True)
 
 
 def export_json(db: Session):
-    quotes = db.query(QuoteModel).all()
+    quotes = (
+        db.query(QuoteModel)
+        .filter(QuoteModel.is_deleted.is_(False))
+        .all()
+    )
 
     data = []
 
@@ -29,8 +34,8 @@ def export_json(db: Session):
                 "views": quote.views,
                 "comments_count": quote.comments_count,
                 "image_url": quote.image_url,
-                "created_at": quote.created_at.isoformat(),
-                "updated_at": quote.updated_at.isoformat()
+                "created_at": quote.created_at.isoformat() if quote.created_at else None,
+                "updated_at": quote.updated_at.isoformat() if quote.updated_at else None
             }
         )
 
@@ -55,7 +60,11 @@ def export_json(db: Session):
 
 
 def export_csv(db: Session):
-    quotes = db.query(QuoteModel).all()
+    quotes = (
+        db.query(QuoteModel)
+        .filter(QuoteModel.is_deleted.is_(False))
+        .all()
+    )
 
     file_path = os.path.join(
         EXPORT_DIR,
@@ -99,8 +108,8 @@ def export_csv(db: Session):
                     quote.views,
                     quote.comments_count,
                     quote.image_url,
-                    quote.created_at,
-                    quote.updated_at
+                    quote.created_at.isoformat() if quote.created_at else None,
+                    quote.updated_at.isoformat() if quote.updated_at else None
                 ]
             )
 

@@ -1,3 +1,4 @@
+
 from sqlalchemy.orm import Session
 
 from database.models import LogModel
@@ -15,13 +16,18 @@ def create_log(
 
     db.add(log)
     db.commit()
+    db.refresh(log)
+
+    return log
 
 
 def get_logs(
-    db: Session
+    db: Session,
+    limit: int = 100
 ):
     return (
         db.query(LogModel)
         .order_by(LogModel.created_at.desc())
+        .limit(limit)
         .all()
     )

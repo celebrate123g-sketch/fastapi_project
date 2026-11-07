@@ -1,3 +1,4 @@
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -13,164 +14,166 @@ BADGES = [
     {
         "name": "First Quote",
         "description": "Create your first quote.",
-        "icon": "🌟"
+        "icon": "🌟",
+        "type": "user"
     },
     {
         "name": "Collector",
         "description": "Create 100 quotes.",
-        "icon": "📚"
+        "icon": "📚",
+        "type": "user"
     },
     {
         "name": "100 Likes",
         "description": "Receive 100 likes.",
-        "icon": "❤️"
+        "icon": "❤️",
+        "type": "user"
     },
     {
         "name": "1000 Views",
         "description": "Reach 1000 total views.",
-        "icon": "👀"
+        "icon": "👀",
+        "type": "user"
     },
     {
         "name": "Top Rated",
         "description": "Average rating is at least 4.8.",
-        "icon": "⭐"
+        "icon": "⭐",
+        "type": "user"
     },
     {
         "name": "Active Author",
         "description": "Receive 50 comments.",
-        "icon": "💬"
+        "icon": "💬",
+        "type": "user"
     },
     {
         "name": "Legend",
         "description": "Reach 10000 total views.",
-        "icon": "🏆"
+        "icon": "🏆",
+        "type": "user"
+    }
+]
+
+
+QUOTE_BADGES = [
+    {
+        "name": "Popular",
+        "description": "1000 views.",
+        "icon": "👀"
+    },
+    {
+        "name": "Loved",
+        "description": "100 likes.",
+        "icon": "❤️"
+    },
+    {
+        "name": "Top Rated",
+        "description": "Rating 4.8 or higher.",
+        "icon": "⭐"
+    },
+    {
+        "name": "Discussed",
+        "description": "50 comments.",
+        "icon": "💬"
     }
 ]
 
 
 def get_all_badges():
-    return BADGES
+    return [
+        {key: value for key, value in badge.items() if key != "type"}
+        for badge in BADGES
+    ]
 
 
 def get_user_badges(
     db: Session,
     user_id: int
 ):
-
-    quotes = (
+    quotes_query = (
         db.query(QuoteModel)
         .filter(
-            QuoteModel.user_id == user_id
+            QuoteModel.user_id == user_id,
+            QuoteModel.is_deleted.is_(False)
         )
-        .all()
     )
 
-    quote_ids = [
-        quote.id
-        for quote in quotes
-    ]
+    total_quotes = quotes_query.count()
 
-    total_quotes = len(quotes)
+    total_views = (
+        db.query(func.coalesce(func.sum(QuoteModel.views), 0))
+        .filter(
+            QuoteModel.user_id == user_id,
+            QuoteModel.is_deleted.is_(False)
+        )
+        .scalar()
+    )
 
-    total_views = sum(
-        quote.views
-        for quote in quotes
+    quote_ids = (
+        db.query(QuoteModel.id)
+        .filter(
+            QuoteModel.user_id == user_id,
+            QuoteModel.is_deleted.is_(False)
+        )
+        .subquery()
     )
 
     total_likes = (
-        db.query(
-            func.count(
-                QuoteLikeModel.id
-            )
-        )
-        .filter(
-            QuoteLikeModel.quote_id.in_(quote_ids)
-        )
+        db.query(func.count(QuoteLikeModel.id))
+        .filter(QuoteLikeModel.quote_id.in_(quote_ids))
         .scalar()
-        if quote_ids else 0
     )
 
     total_comments = (
-        db.query(
-            func.count(
-                CommentModel.id
-            )
-        )
-        .filter(
-            CommentModel.quote_id.in_(quote_ids)
-        )
+        db.query(func.count(CommentModel.id))
+        .filter(CommentModel.quote_id.in_(quote_ids))
         .scalar()
-        if quote_ids else 0
     )
 
     average_rating = (
-        db.query(
-            func.avg(
-                QuoteRatingModel.rating
-            )
-        )
-        .filter(
-            QuoteRatingModel.quote_id.in_(quote_ids)
-        )
+        db.query(func.avg(QuoteRatingModel.rating))
+        .filter(QuoteRatingModel.quote_id.in_(quote_ids))
         .scalar()
-        if quote_ids else None
     )
 
-    badges = [
+    values = {
+        "total_quotes": total_quotes,
+        "total_views": total_views,
+        "total_likes": total_likes,
+        "total_comments": total_comments,
+        "average_rating": average_rating
+    }
 
-        {
-            "name": "First Quote",
-            "description": "Create your first quote.",
-            "icon": "🌟",
-            "unlocked": total_quotes >= 1
-        },
+    badges = []
 
-        {
-            "name": "Collector",
-            "description": "Create 100 quotes.",
-            "icon": "📚",
-            "unlocked": total_quotes >= 100
-        },
+    for badge in BADGES:
+        unlocked = False
 
-        {
-            "name": "100 Likes",
-            "description": "Receive 100 likes.",
-            "icon": "❤️",
-            "unlocked": total_likes >= 100
-        },
-
-        {
-            "name": "1000 Views",
-            "description": "Reach 1000 total views.",
-            "icon": "👀",
-            "unlocked": total_views >= 1000
-        },
-
-        {
-            "name": "Top Rated",
-            "description": "Average rating is at least 4.8.",
-            "icon": "⭐",
-            "unlocked": (
+        if badge["name"] == "First Quote":
+            unlocked = total_quotes >= 1
+        elif badge["name"] == "Collector":
+            unlocked = total_quotes >= 100
+        elif badge["name"] == "100 Likes":
+            unlocked = total_likes >= 100
+        elif badge["name"] == "1000 Views":
+            unlocked = total_views >= 1000
+        elif badge["name"] == "Top Rated":
+            unlocked = (
                 average_rating is not None
                 and average_rating >= 4.8
             )
-        },
+        elif badge["name"] == "Active Author":
+            unlocked = total_comments >= 50
+        elif badge["name"] == "Legend":
+            unlocked = total_views >= 10000
 
-        {
-            "name": "Active Author",
-            "description": "Receive 50 comments.",
-            "icon": "💬",
-            "unlocked": total_comments >= 50
-        },
-
-        {
-            "name": "Legend",
-            "description": "Reach 10000 total views.",
-            "icon": "🏆",
-            "unlocked": total_views >= 10000
-        }
-
-    ]
+        badges.append({
+            "name": badge["name"],
+            "description": badge["description"],
+            "icon": badge["icon"],
+            "unlocked": unlocked
+        })
 
     return badges
 
@@ -179,11 +182,11 @@ def get_quote_badges(
     db: Session,
     quote_id: int
 ):
-
     quote = (
         db.query(QuoteModel)
         .filter(
-            QuoteModel.id == quote_id
+            QuoteModel.id == quote_id,
+            QuoteModel.is_deleted.is_(False)
         )
         .first()
     )
@@ -192,74 +195,36 @@ def get_quote_badges(
         return None
 
     likes = (
-        db.query(
-            func.count(
-                QuoteLikeModel.id
-            )
-        )
-        .filter(
-            QuoteLikeModel.quote_id == quote_id
-        )
+        db.query(func.count(QuoteLikeModel.id))
+        .filter(QuoteLikeModel.quote_id == quote_id)
         .scalar()
     )
 
     comments = (
-        db.query(
-            func.count(
-                CommentModel.id
-            )
-        )
-        .filter(
-            CommentModel.quote_id == quote_id
-        )
+        db.query(func.count(CommentModel.id))
+        .filter(CommentModel.quote_id == quote_id)
         .scalar()
     )
 
     rating = (
-        db.query(
-            func.avg(
-                QuoteRatingModel.rating
-            )
-        )
-        .filter(
-            QuoteRatingModel.quote_id == quote_id
-        )
+        db.query(func.avg(QuoteRatingModel.rating))
+        .filter(QuoteRatingModel.quote_id == quote_id)
         .scalar()
     )
 
+    unlocked_values = {
+        "Popular": quote.views >= 1000,
+        "Loved": likes >= 100,
+        "Top Rated": rating is not None and rating >= 4.8,
+        "Discussed": comments >= 50
+    }
+
     return [
-
         {
-            "name": "Popular",
-            "description": "1000 views.",
-            "icon": "👀",
-            "unlocked": quote.views >= 1000
-        },
-
-        {
-            "name": "Loved",
-            "description": "100 likes.",
-            "icon": "❤️",
-            "unlocked": likes >= 100
-        },
-
-        {
-            "name": "Top Rated",
-            "description": "Rating 4.8 or higher.",
-            "icon": "⭐",
-            "unlocked": (
-                rating is not None
-                and rating >= 4.8
-            )
-        },
-
-        {
-            "name": "Discussed",
-            "description": "50 comments.",
-            "icon": "💬",
-            "unlocked": comments >= 50
+            **badge,
+            "unlocked": unlocked_values[badge["name"]]
         }
-
+        for badge in QUOTE_BADGES
     ]
 
 
@@ -267,11 +232,7 @@ def get_badge_statistics(
     db: Session,
     user_id: int
 ):
-
-    badges = get_user_badges(
-        db,
-        user_id
-    )
+    badges = get_user_badges(db, user_id)
 
     unlocked = sum(
         1

@@ -19,7 +19,7 @@ def rate_quote(
         db.query(QuoteModel)
         .filter(
             QuoteModel.id == quote_id,
-            QuoteModel.is_deleted == False
+            QuoteModel.is_deleted.is_(False)
         )
         .first()
     )
@@ -71,23 +71,55 @@ def get_quote_rating(
     db: Session,
     quote_id: int
 ):
-    ratings = (
-        db.query(QuoteRatingModel.rating)
+    result = (
+        db.query(
+            func.avg(QuoteRatingModel.rating),
+            func.count(QuoteRatingModel.id),
+            func.sum(
+                func.case(
+                    (QuoteRatingModel.rating == 5, 1),
+                    else_=0
+                )
+            ),
+            func.sum(
+                func.case(
+                    (QuoteRatingModel.rating == 4, 1),
+                    else_=0
+                )
+            ),
+            func.sum(
+                func.case(
+                    (QuoteRatingModel.rating == 3, 1),
+                    else_=0
+                )
+            ),
+            func.sum(
+                func.case(
+                    (QuoteRatingModel.rating == 2, 1),
+                    else_=0
+                )
+            ),
+            func.sum(
+                func.case(
+                    (QuoteRatingModel.rating == 1, 1),
+                    else_=0
+                )
+            )
+        )
         .filter(QuoteRatingModel.quote_id == quote_id)
-        .all()
+        .first()
     )
 
-    values = [item.rating for item in ratings]
-    votes = len(values)
+    average, votes, five, four, three, two, one = result
 
     return {
-        "average_rating": round(sum(values) / votes, 2) if votes else 0.0,
-        "votes": votes,
-        "five_stars": values.count(5),
-        "four_stars": values.count(4),
-        "three_stars": values.count(3),
-        "two_stars": values.count(2),
-        "one_star": values.count(1)
+        "average_rating": round(float(average or 0), 2),
+        "votes": votes or 0,
+        "five_stars": five or 0,
+        "four_stars": four or 0,
+        "three_stars": three or 0,
+        "two_stars": two or 0,
+        "one_star": one or 0
     }
 
 
@@ -95,6 +127,8 @@ def get_top_rated_quotes(
     db: Session,
     limit: int = 10
 ):
+    limit = max(1, min(limit, 100))
+
     result = (
         db.query(
             QuoteModel,
@@ -105,7 +139,7 @@ def get_top_rated_quotes(
             QuoteRatingModel,
             QuoteRatingModel.quote_id == QuoteModel.id
         )
-        .filter(QuoteModel.is_deleted == False)
+        .filter(QuoteModel.is_deleted.is_(False))
         .group_by(QuoteModel.id)
         .order_by(
             func.avg(QuoteRatingModel.rating).desc(),
@@ -130,8 +164,7 @@ def get_top_rated_quotes_min_votes(
     limit: int = 10,
     min_votes: int = 5
 ):
-    if limit < 1:
-        raise ValueError("limit must be at least 1.")
+    limit = max(1, min(limit, 100))
 
     if min_votes < 1:
         raise ValueError("min_votes must be at least 1.")
@@ -146,7 +179,7 @@ def get_top_rated_quotes_min_votes(
             QuoteRatingModel,
             QuoteRatingModel.quote_id == QuoteModel.id
         )
-        .filter(QuoteModel.is_deleted == False)
+        .filter(QuoteModel.is_deleted.is_(False))
         .group_by(QuoteModel.id)
         .having(
             func.count(QuoteRatingModel.id) >= min_votes

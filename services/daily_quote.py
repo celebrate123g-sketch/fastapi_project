@@ -1,3 +1,4 @@
+
 from datetime import date
 
 from fastapi import HTTPException
@@ -11,6 +12,9 @@ def get_daily_quote(
 ):
     quotes = (
         db.query(QuoteModel)
+        .filter(
+            QuoteModel.is_deleted.is_(False)
+        )
         .order_by(QuoteModel.id)
         .all()
     )
@@ -23,10 +27,7 @@ def get_daily_quote(
 
     today = date.today()
 
-    index = (
-        today.toordinal()
-        % len(quotes)
-    )
+    index = today.toordinal() % len(quotes)
 
     return {
         "date": today,
@@ -40,6 +41,9 @@ def get_daily_quote_by_date(
 ):
     quotes = (
         db.query(QuoteModel)
+        .filter(
+            QuoteModel.is_deleted.is_(False)
+        )
         .order_by(QuoteModel.id)
         .all()
     )
@@ -50,10 +54,7 @@ def get_daily_quote_by_date(
             detail="No quotes found."
         )
 
-    index = (
-        target_date.toordinal()
-        % len(quotes)
-    )
+    index = target_date.toordinal() % len(quotes)
 
     return {
         "date": target_date,

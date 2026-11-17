@@ -1,12 +1,16 @@
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from database.init_db import create_tables
-from database.database import migrate_user_role
+from database.database import (
+    migrate_user_role,
+    migrate_comment_user_id
+)
 
 from routers.quotes import router as quotes_router
 from routers.comments import router as comments_router
@@ -23,13 +27,14 @@ from routers.dashboard import router as dashboard_router
 from routers.similar import router as similar_router
 from routers.badges import router as badges_router
 from routers.users import router as users_router
-from routers import recommendations
+from routers.recommendations import router as recommendations_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_tables()
     migrate_user_role()
+    migrate_comment_user_id()
     yield
 
 
@@ -43,12 +48,17 @@ templates = Jinja2Templates(
     directory="templates"
 )
 
+Path("uploads").mkdir(
+    parents=True,
+    exist_ok=True
+)
+
 app.mount(
     "/uploads",
     StaticFiles(directory="uploads"),
     name="uploads"
 )
-migrate_comment_user_id()
+
 app.include_router(quotes_router)
 app.include_router(comments_router)
 app.include_router(logs_router)
@@ -58,7 +68,7 @@ app.include_router(import_router)
 app.include_router(history_router)
 app.include_router(authors_router)
 app.include_router(ratings_router)
-app.include_router(recommendations.router)
+app.include_router(recommendations_router)
 app.include_router(daily_quote_router)
 app.include_router(reports_router)
 app.include_router(badges_router)

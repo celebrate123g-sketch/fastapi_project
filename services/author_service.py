@@ -1,33 +1,23 @@
-from sqlalchemy import desc, func
+
+from sqlalchemy import desc, func, Integer, cast
 from sqlalchemy.orm import Session
 
 from database.models import QuoteModel
 
 
-def get_all_authors(
-    db: Session
-):
-
+def get_all_authors(db: Session):
     authors = (
         db.query(
             QuoteModel.author,
-            func.count(
-                QuoteModel.id
-            ).label("quotes"),
+            func.count(QuoteModel.id).label("quotes"),
+            func.sum(QuoteModel.likes).label("likes"),
+            func.sum(QuoteModel.views).label("views"),
             func.sum(
-                QuoteModel.likes
-            ).label("likes"),
-            func.sum(
-                QuoteModel.views
-            ).label("views"),
-            func.sum(
-                func.cast(
-                    QuoteModel.favorite,
-                    db.bind.dialect.type_descriptor(
-                        QuoteModel.favorite.type
-                    )
-                )
+                cast(QuoteModel.favorite, Integer)
             ).label("favorites")
+        )
+        .filter(
+            QuoteModel.is_deleted.is_(False)
         )
         .group_by(
             QuoteModel.author
@@ -38,12 +28,9 @@ def get_all_authors(
         .all()
     )
 
-
     result = []
 
-
     for author in authors:
-
         result.append(
             {
                 "author": author.author,
@@ -54,76 +41,67 @@ def get_all_authors(
             }
         )
 
-
     return result
-
 
 
 def get_top_authors(
     db: Session,
     sort: str = "likes"
 ):
-
     authors = get_all_authors(db)
 
-
     if sort == "likes":
-
         authors.sort(
             key=lambda item: item["likes"],
             reverse=True
         )
 
     elif sort == "views":
-
         authors.sort(
             key=lambda item: item["views"],
             reverse=True
         )
 
     elif sort == "quotes":
-
         authors.sort(
             key=lambda item: item["quotes"],
             reverse=True
         )
 
+    elif sort == "favorites":
+        authors.sort(
+            key=lambda item: item["favorites"],
+            reverse=True
+        )
 
     return authors
-
 
 
 def get_author(
     db: Session,
     author: str
 ):
-
     quotes = (
-        db.query(
-            QuoteModel
-        )
+        db.query(QuoteModel)
         .filter(
-            QuoteModel.author == author
+            QuoteModel.author == author,
+            QuoteModel.is_deleted.is_(False)
         )
         .all()
     )
 
-
     if not quotes:
         return None
 
-
     likes = sum(
-        quote.likes
+        quote.likes or 0
         for quote in quotes
     )
-
 
     views = sum(
-        quote.views
+        quote.views or 0
         for quote in quotes
     )
-
 
     favorites = sum(
         1
@@ -131,130 +109,85 @@ def get_author(
         if quote.favorite
     )
 
-
     comments = sum(
-        quote.comments_count
+        quote.comments_count or 0
         for quote in quotes
     )
 
-
     return {
-
         "author": author,
-
         "statistics": {
-
             "quotes": len(quotes),
-
             "likes": likes,
-
             "views": views,
-
             "favorites": favorites,
-
             "comments": comments
         },
-
         "quotes": quotes
     }
-
 
 
 def get_author_popular_quotes(
     db: Session,
     author: str
 ):
-
     return (
-
-        db.query(
-            QuoteModel
-        )
-
+        db.query(QuoteModel)
         .filter(
-            QuoteModel.author == author
+            QuoteModel.author == author,
+            QuoteModel.is_deleted.is_(False)
         )
-
         .order_by(
-            desc(
-                QuoteModel.likes
-            )
+            desc(QuoteModel.likes)
         )
-
         .all()
     )
-
 
 
 def get_author_random_quote(
     db: Session,
     author: str
 ):
-
     return (
-
-        db.query(
-            QuoteModel
-        )
-
+        db.query(QuoteModel)
         .filter(
-            QuoteModel.author == author
+            QuoteModel.author == author,
+            QuoteModel.is_deleted.is_(False)
         )
-
         .order_by(
             func.random()
         )
-
         .first()
     )
-
 
 
 def get_author_categories(
     db: Session,
     author: str
 ):
-
     categories = (
-
         db.query(
-
             QuoteModel.category,
-
-            func.count(
-                QuoteModel.id
-            )
-
+            func.count(QuoteModel.id)
         )
-
         .filter(
-            QuoteModel.author == author
+            QuoteModel.author == author,
+            QuoteModel.is_deleted.is_(False)
         )
-
         .group_by(
             QuoteModel.category
         )
-
         .all()
     )
 
-
     result = []
 
-
     for category in categories:
-
         result.append(
-
             {
-
                 "category": category[0],
-
                 "quotes": category[1]
-
             }
-
         )
-
 
     return result

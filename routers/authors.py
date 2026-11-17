@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -34,9 +35,7 @@ router = APIRouter(
 def authors(
     db: Session = Depends(get_db)
 ):
-
     return get_all_authors(db)
-
 
 
 @router.get(
@@ -47,12 +46,16 @@ def top_authors(
     sort: str = "likes",
     db: Session = Depends(get_db)
 ):
+    if sort not in ["likes", "views", "quotes", "favorites"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid sorting parameter."
+        )
 
     return get_top_authors(
         db,
         sort
     )
-
 
 
 @router.get(
@@ -63,21 +66,18 @@ def author(
     author: str,
     db: Session = Depends(get_db)
 ):
-
     result = get_author(
         db,
         author
     )
 
     if result is None:
-
         raise HTTPException(
             status_code=404,
             detail="Author not found."
         )
 
     return result
-
 
 
 @router.get(
@@ -88,12 +88,18 @@ def popular_quotes(
     author: str,
     db: Session = Depends(get_db)
 ):
-
-    return get_author_popular_quotes(
+    result = get_author_popular_quotes(
         db,
         author
     )
 
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail="Author not found."
+        )
+
+    return result
 
 
 @router.get(
@@ -104,23 +110,20 @@ def random_quote(
     author: str,
     db: Session = Depends(get_db)
 ):
-
     quote = get_author_random_quote(
         db,
         author
     )
 
     if quote is None:
-
         raise HTTPException(
             status_code=404,
-            detail="Author not found."
+            detail="Quote not found for this author."
         )
 
     return {
         "quote": quote
     }
-
 
 
 @router.get(
@@ -131,8 +134,15 @@ def categories(
     author: str,
     db: Session = Depends(get_db)
 ):
-
-    return get_author_categories(
+    result = get_author_categories(
         db,
         author
     )
+
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail="Author not found."
+        )
+
+    return result

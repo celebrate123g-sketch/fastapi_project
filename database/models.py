@@ -24,13 +24,11 @@ from database.database import Base
 quote_tags = Table(
     "quote_tags",
     Base.metadata,
-
     Column(
         "quote_id",
         ForeignKey("quotes.id"),
         primary_key=True
     ),
-
     Column(
         "tag_id",
         ForeignKey("tags.id"),
@@ -42,13 +40,11 @@ quote_tags = Table(
 user_likes = Table(
     "user_likes",
     Base.metadata,
-
     Column(
         "user_id",
         ForeignKey("users.id"),
         primary_key=True
     ),
-
     Column(
         "quote_id",
         ForeignKey("quotes.id"),
@@ -60,13 +56,11 @@ user_likes = Table(
 user_favorites = Table(
     "user_favorites",
     Base.metadata,
-
     Column(
         "user_id",
         ForeignKey("users.id"),
         primary_key=True
     ),
-
     Column(
         "quote_id",
         ForeignKey("quotes.id"),
@@ -280,6 +274,12 @@ class CommentModel(Base):
         ForeignKey("quotes.id")
     )
 
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True,
+        index=True
+    )
+
     author: Mapped[str] = mapped_column(
         String(100),
         nullable=False
@@ -298,6 +298,8 @@ class CommentModel(Base):
     quote: Mapped["QuoteModel"] = relationship(
         back_populates="comments"
     )
+
+    user: Mapped["UserModel | None"] = relationship()
 
 
 class LogModel(Base):
@@ -569,19 +571,3 @@ class QuoteRatingModel(Base):
             name="uq_quote_rating_user"
         ),
     )
-
-
-class CommentModel(Base):
-    __tablename__ = "comments"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    quote_id: Mapped[int] = mapped_column(ForeignKey("quotes.id"))
-    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
-    author: Mapped[str] = mapped_column(String(100), nullable=False)
-    text: Mapped[str] = mapped_column(String(1000), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    quote: Mapped["QuoteModel"] = relationship(back_populates="comments")
-    user: Mapped["UserModel | None"] = relationship()
-
-

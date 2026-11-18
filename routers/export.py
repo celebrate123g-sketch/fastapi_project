@@ -3,6 +3,9 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from database.database import get_db
+from dependencies.auth import get_admin_user
+from database.models import UserModel
+
 from services.export_service import (
     export_json,
     export_csv
@@ -15,7 +18,8 @@ router = APIRouter(
 
 @router.get("/export/json")
 def export_quotes_json(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
     file_path = export_json(db)
 
@@ -28,7 +32,8 @@ def export_quotes_json(
 
 @router.get("/export/csv")
 def export_quotes_csv(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_admin_user)
 ):
     file_path = export_csv(db)
 

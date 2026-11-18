@@ -12,100 +12,64 @@ from database.models import (
 from services.daily_quote_service import get_daily_quote
 
 
-def get_dashboard(
-    db: Session
-):
+def get_dashboard(db: Session):
 
     total_quotes = (
-        db.query(
-            func.count(
-                QuoteModel.id
-            )
-        )
+        db.query(func.count(QuoteModel.id))
+        .filter(QuoteModel.is_deleted.is_(False))
         .scalar()
     )
 
     total_authors = (
-        db.query(
-            func.count(
-                AuthorModel.id
-            )
-        )
+        db.query(func.count(AuthorModel.id))
         .scalar()
     )
 
     total_comments = (
-        db.query(
-            func.count(
-                CommentModel.id
-            )
-        )
+        db.query(func.count(CommentModel.id))
+        .join(QuoteModel, CommentModel.quote_id == QuoteModel.id)
+        .filter(QuoteModel.is_deleted.is_(False))
         .scalar()
     )
 
     total_reports = (
-        db.query(
-            func.count(
-                ReportModel.id
-            )
-        )
+        db.query(func.count(ReportModel.id))
+        .join(QuoteModel, ReportModel.quote_id == QuoteModel.id)
+        .filter(QuoteModel.is_deleted.is_(False))
         .scalar()
     )
 
     total_ratings = (
-        db.query(
-            func.count(
-                QuoteRatingModel.id
-            )
-        )
+        db.query(func.count(QuoteRatingModel.id))
+        .join(QuoteModel, QuoteRatingModel.quote_id == QuoteModel.id)
+        .filter(QuoteModel.is_deleted.is_(False))
         .scalar()
     )
 
     total_views = (
         db.query(
-            func.coalesce(
-                func.sum(
-                    QuoteModel.views
-                ),
-                0
-            )
+            func.coalesce(func.sum(QuoteModel.views), 0)
         )
+        .filter(QuoteModel.is_deleted.is_(False))
         .scalar()
     )
 
     average_rating = (
         db.query(
-            func.avg(
-                QuoteRatingModel.rating
-            )
+            func.coalesce(func.avg(QuoteRatingModel.rating), 0.0)
         )
+        .join(QuoteModel, QuoteRatingModel.quote_id == QuoteModel.id)
+        .filter(QuoteModel.is_deleted.is_(False))
         .scalar()
     )
 
-    if average_rating is None:
-        average_rating = 0.0
-
-    dashboard = {
-
+    return {
         "total_quotes": total_quotes,
-
         "total_authors": total_authors,
-
         "total_comments": total_comments,
-
         "total_views": total_views,
-
         "total_reports": total_reports,
-
         "total_ratings": total_ratings,
-
-        "average_rating": round(
-            float(average_rating),
-            2
-        ),
-
+        "average_rating": round(float(average_rating), 2),
         "quote_of_the_day": get_daily_quote(db)
-
     }
-
-    return dashboard

@@ -9,7 +9,8 @@ from fastapi.templating import Jinja2Templates
 from database.init_db import create_tables
 from database.database import (
     migrate_user_role,
-    migrate_comment_user_id
+    migrate_comment_user_id,
+    migrate_quote_language
 )
 
 from routers.quotes import router as quotes_router
@@ -35,6 +36,7 @@ async def lifespan(app: FastAPI):
     create_tables()
     migrate_user_role()
     migrate_comment_user_id()
+    migrate_quote_language()
     yield
 
 

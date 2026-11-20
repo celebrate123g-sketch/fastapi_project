@@ -49,6 +49,20 @@ def migrate_comment_user_id():
             )
 
 
+def migrate_quote_language():
+    with engine.begin() as connection:
+        result = connection.exec_driver_sql(
+            "PRAGMA table_info(quotes)"
+        )
+
+        columns = [row[1] for row in result.fetchall()]
+
+        if columns and "language" not in columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE quotes ADD COLUMN language VARCHAR(10) NOT NULL DEFAULT 'ru'"
+            )
+
+
 def get_db():
     db = SessionLocal()
 

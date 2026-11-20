@@ -89,6 +89,13 @@ class QuoteModel(Base):
         nullable=False
     )
 
+    language: Mapped[str] = mapped_column(
+        String(10),
+        default="ru",
+        server_default="ru",
+        nullable=False
+    )
+
     category: Mapped[str] = mapped_column(
         String(50),
         nullable=False
@@ -146,6 +153,11 @@ class QuoteModel(Base):
         cascade="all, delete-orphan"
     )
 
+    translations: Mapped[list["QuoteTranslationModel"]] = relationship(
+        back_populates="quote",
+        cascade="all, delete-orphan"
+    )
+
     tags: Mapped[list["TagModel"]] = relationship(
         secondary=quote_tags,
         back_populates="quotes"
@@ -188,6 +200,50 @@ class QuoteModel(Base):
 
     user: Mapped["UserModel"] = relationship(
         back_populates="quotes"
+    )
+
+
+class QuoteTranslationModel(Base):
+
+    __tablename__ = "quote_translations"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    quote_id: Mapped[int] = mapped_column(
+        ForeignKey("quotes.id"),
+        nullable=False,
+        index=True
+    )
+
+    language: Mapped[str] = mapped_column(
+        String(10),
+        nullable=False
+    )
+
+    text: Mapped[str] = mapped_column(
+        String(1000),
+        nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    quote: Mapped["QuoteModel"] = relationship(
+        back_populates="translations"
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "quote_id",
+            "language",
+            name="uq_quote_translation_language"
+        ),
     )
 
 

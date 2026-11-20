@@ -1,7 +1,11 @@
+
 from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+Language = Literal["ru", "en", "uz"]
 
 
 class QuoteBase(BaseModel):
@@ -25,15 +29,27 @@ class QuoteBase(BaseModel):
 
 
 class QuoteCreate(QuoteBase):
-    pass
+    language: Language = "ru"
 
 
 class QuoteUpdate(QuoteBase):
-    pass
+    language: Language = "ru"
+
+
+class QuoteTranslationResponse(BaseModel):
+    language: Language
+    text: str
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 
 class QuoteResponse(QuoteBase):
     id: int
+
+    language: Language
+    translations: list[QuoteTranslationResponse] = []
 
     favorite: bool
 

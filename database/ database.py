@@ -62,6 +62,18 @@ def migrate_quote_language():
                 "ALTER TABLE quotes ADD COLUMN language VARCHAR(10) NOT NULL DEFAULT 'ru'"
             )
 
+def migrate_quote_history_language():
+    with engine.begin() as connection:
+        result = connection.exec_driver_sql(
+            "PRAGMA table_info(quote_history)"
+        )
+
+        columns = [row[1] for row in result.fetchall()]
+
+        if columns and "language" not in columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE quote_history ADD COLUMN language VARCHAR(10) NOT NULL DEFAULT 'ru'"
+            )
 
 def get_db():
     db = SessionLocal()

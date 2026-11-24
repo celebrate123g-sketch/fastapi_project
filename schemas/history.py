@@ -1,6 +1,7 @@
+
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from schemas.quote import QuoteResponse
 
@@ -13,12 +14,15 @@ class QuoteHistoryResponse(BaseModel):
 
     user_id: int | None = None
 
-    viewed_at: datetime
+    viewed_at: datetime = Field(
+        validation_alias="created_at"
+    )
 
     quote: QuoteResponse
 
     model_config = ConfigDict(
-        from_attributes=True
+        from_attributes=True,
+        populate_by_name=True
     )
 
 

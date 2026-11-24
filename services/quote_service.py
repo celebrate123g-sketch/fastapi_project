@@ -1,12 +1,13 @@
 
 from fastapi import HTTPException
-from sqlalchemy import desc, func, or_
+from sqlalchemy import desc, func, or_, and_
 from sqlalchemy.orm import Session
 
 from database.models import (
     QuoteModel,
     QuoteViewModel,
     QuoteRatingModel,
+    QuoteTranslationModel,
     UserModel,
     user_likes,
     user_favorites
@@ -17,6 +18,32 @@ from schemas.quote import QuoteCreate, QuoteUpdate
 from services.log_service import create_log
 from services.history_service import save_quote_history
 from services.duplicate_service import find_duplicate_quote
+
+
+def attach_translation(quote: QuoteModel, language: str = "ru"):
+    translation = next(
+        (
+            item for item in quote.translations
+            if item.language == language
+        ),
+        None
+    )
+
+    quote.localized_text = (
+        translation.text if translation else quote.text
+    )
+
+    return quote
+
+
+def attach_translations(
+    quotes: list[QuoteModel],
+    language: str = "ru"
+):
+    for quote in quotes:
+        attach_translation(quote, language)
+
+    return quotes
 
 
 def attach_rating(db: Session, quote: QuoteModel):
@@ -68,11 +95,45 @@ def attach_ratings(db: Session, quotes: list[QuoteModel]):
     return quotes
 
 
+def apply_search_filters(
+    query,
+    author: str | None = None,
+    text: str | None = None,
+    category: str | None = None,
+    language: str = "ru"
+):
+    if author:
+        query = query.filter(
+            QuoteModel.author.ilike(f"%{author}%")
+        )
+
+    if text:
+        query = query.filter(
+            or_(
+                QuoteModel.text.ilike(f"%{text}%"),
+                QuoteModel.translations.any(
+                    and_(
+                        QuoteTranslationModel.language == language,
+                        QuoteTranslationModel.text.ilike(f"%{text}%")
+                    )
+                )
+            )
+        )
+
+    if category:
+        query = query.filter(
+            QuoteModel.category == category
+        )
+
+    return query
+
+
 def get_all_quotes(
     db: Session,
     skip: int = 0,
     limit: int = 10,
-    sort: str = "newest"
+    sort: str = "newest",
+    language: str = "ru"
 ):
     query = db.query(QuoteModel).filter(
         QuoteModel.is_deleted.is_(False)
@@ -95,7 +156,8 @@ def get_all_quotes(
             key=lambda quote: quote.average_rating,
             reverse=True
         )
-        return quotes[skip:skip + limit]
+        quotes = quotes[skip:skip + limit]
+        return attach_translations(quotes, language)
     else:
         raise HTTPException(
             status_code=400,
@@ -103,10 +165,12 @@ def get_all_quotes(
         )
 
     quotes = query.offset(skip).limit(limit).all()
-    return attach_ratings(db, quotes)
+    quotes = attach_ratings(db, quotes)
+
+    return attach_translations(quotes, language)
 
 
-def get_random_quote(db: Session):
+def get_random_quote(db: Session, language: str = "ru"):
     quote = (
         db.query(QuoteModel)
         .filter(QuoteModel.is_deleted.is_(False))
@@ -120,10 +184,16 @@ def get_random_quote(db: Session):
             detail="No quotes found."
         )
 
-    return attach_rating(db, quote)
+    quote = attach_rating(db, quote)
+
+    return attach_translation(quote, language)
 
 
-def get_quote_by_id(db: Session, quote_id: int):
+def get_quote_by_id(
+    db: Session,
+    quote_id: int,
+    language: str = "ru"
+):
     quote = (
         db.query(QuoteModel)
         .filter(
@@ -139,10 +209,16 @@ def get_quote_by_id(db: Session, quote_id: int):
             detail="Quote not found."
         )
 
-    return attach_rating(db, quote)
+    quote = attach_rating(db, quote)
+
+    return attach_translation(quote, language)
 
 
-def increment_views(db: Session, quote_id: int):
+def increment_views(
+    db: Session,
+    quote_id: int,
+    language: str = "ru"
+):
     quote = (
         db.query(QuoteModel)
         .filter(
@@ -169,7 +245,9 @@ def increment_views(db: Session, quote_id: int):
 
     save_quote_history(db, quote)
 
-    return attach_rating(db, quote)
+    quote = attach_rating(db, quote)
+
+    return attach_translation(quote, language)
 
 
 def create_quote(
@@ -193,6 +271,7 @@ def create_quote(
         author=quote.author,
         text=quote.text,
         category=quote.category,
+        language=quote.language,
         user_id=user_id
     )
 
@@ -200,7 +279,9 @@ def create_quote(
     db.commit()
     db.refresh(new_quote)
 
-    return attach_rating(db, new_quote)
+    new_quote = attach_rating(db, new_quote)
+
+    return attach_translation(new_quote, new_quote.language)
 
 
 def update_quote(
@@ -246,13 +327,16 @@ def update_quote(
     quote.author = quote_data.author
     quote.text = quote_data.text
     quote.category = quote_data.category
+    quote.language = quote_data.language
 
     db.commit()
     db.refresh(quote)
 
     create_log(db, "Updated quote", quote.id)
 
-    return attach_rating(db, quote)
+    quote = attach_rating(db, quote)
+
+    return attach_translation(quote, quote.language)
 
 
 def delete_quote(db: Session, quote_id: int):
@@ -285,7 +369,11 @@ def delete_quote(db: Session, quote_id: int):
     }
 
 
-def get_quotes_by_category(db: Session, category: str):
+def get_quotes_by_category(
+    db: Session,
+    category: str,
+    language: str = "ru"
+):
     quotes = (
         db.query(QuoteModel)
         .filter(
@@ -295,10 +383,16 @@ def get_quotes_by_category(db: Session, category: str):
         .all()
     )
 
-    return attach_ratings(db, quotes)
+    quotes = attach_ratings(db, quotes)
+
+    return attach_translations(quotes, language)
 
 
-def get_favorite_quotes(db: Session, user_id: int):
+def get_favorite_quotes(
+    db: Session,
+    user_id: int,
+    language: str = "ru"
+):
     quotes = (
         db.query(QuoteModel)
         .join(
@@ -312,13 +406,16 @@ def get_favorite_quotes(db: Session, user_id: int):
         .all()
     )
 
-    return attach_ratings(db, quotes)
+    quotes = attach_ratings(db, quotes)
+
+    return attach_translations(quotes, language)
 
 
 def add_to_favorites(
     db: Session,
     quote_id: int,
-    user_id: int
+    user_id: int,
+    language: str = "ru"
 ):
     user = (
         db.query(UserModel)
@@ -365,13 +462,16 @@ def add_to_favorites(
         )
         db.commit()
 
-    return attach_rating(db, quote)
+    quote = attach_rating(db, quote)
+
+    return attach_translation(quote, language)
 
 
 def remove_from_favorites(
     db: Session,
     quote_id: int,
-    user_id: int
+    user_id: int,
+    language: str = "ru"
 ):
     quote = (
         db.query(QuoteModel)
@@ -406,13 +506,16 @@ def remove_from_favorites(
         )
         db.commit()
 
-    return attach_rating(db, quote)
+    quote = attach_rating(db, quote)
+
+    return attach_translation(quote, language)
 
 
 def like_quote(
     db: Session,
     quote_id: int,
-    user_id: int
+    user_id: int,
+    language: str = "ru"
 ):
     user = (
         db.query(UserModel)
@@ -462,13 +565,16 @@ def like_quote(
         db.commit()
         db.refresh(quote)
 
-    return attach_rating(db, quote)
+    quote = attach_rating(db, quote)
+
+    return attach_translation(quote, language)
 
 
 def unlike_quote(
     db: Session,
     quote_id: int,
-    user_id: int
+    user_id: int,
+    language: str = "ru"
 ):
     quote = (
         db.query(QuoteModel)
@@ -508,10 +614,15 @@ def unlike_quote(
         db.commit()
         db.refresh(quote)
 
-    return attach_rating(db, quote)
+    quote = attach_rating(db, quote)
+
+    return attach_translation(quote, language)
 
 
-def get_most_viewed_quotes(db: Session):
+def get_most_viewed_quotes(
+    db: Session,
+    language: str = "ru"
+):
     quotes = (
         db.query(QuoteModel)
         .filter(QuoteModel.is_deleted.is_(False))
@@ -519,35 +630,31 @@ def get_most_viewed_quotes(db: Session):
         .all()
     )
 
-    return attach_ratings(db, quotes)
+    quotes = attach_ratings(db, quotes)
+
+    return attach_translations(quotes, language)
 
 
 def count_search_quotes(
     db: Session,
     author: str | None = None,
     text: str | None = None,
-    category: str | None = None
+    category: str | None = None,
+    language: str = "ru"
 ):
     query = db.query(QuoteModel).filter(
         QuoteModel.is_deleted.is_(False)
     )
 
-    if author:
-        query = query.filter(
-            QuoteModel.author.ilike(f"%{author}%")
-        )
+    query = apply_search_filters(
+        query,
+        author,
+        text,
+        category,
+        language
+    )
 
-    if text:
-        query = query.filter(
-            QuoteModel.text.ilike(f"%{text}%")
-        )
-
-    if category:
-        query = query.filter(
-            QuoteModel.category == category
-        )
-
-    return query.count()
+    return query.distinct().count()
 
 
 def search_quotes(
@@ -557,26 +664,20 @@ def search_quotes(
     category: str | None = None,
     sort: str = "newest",
     skip: int = 0,
-    limit: int = 10
+    limit: int = 10,
+    language: str = "ru"
 ):
     query = db.query(QuoteModel).filter(
         QuoteModel.is_deleted.is_(False)
     )
 
-    if author:
-        query = query.filter(
-            QuoteModel.author.ilike(f"%{author}%")
-        )
-
-    if text:
-        query = query.filter(
-            QuoteModel.text.ilike(f"%{text}%")
-        )
-
-    if category:
-        query = query.filter(
-            QuoteModel.category == category
-        )
+    query = apply_search_filters(
+        query,
+        author,
+        text,
+        category,
+        language
+    )
 
     if sort == "newest":
         query = query.order_by(desc(QuoteModel.created_at))
@@ -589,25 +690,31 @@ def search_quotes(
     elif sort == "author":
         query = query.order_by(QuoteModel.author)
     elif sort == "rating":
-        quotes = query.all()
+        quotes = query.distinct().all()
         quotes = attach_ratings(db, quotes)
         quotes.sort(
             key=lambda quote: quote.average_rating,
             reverse=True
         )
-        return quotes[skip:skip + limit]
+        quotes = quotes[skip:skip + limit]
+
+        return attach_translations(quotes, language)
     else:
         raise HTTPException(
             status_code=400,
             detail="Invalid sort type."
         )
 
-    quotes = query.offset(skip).limit(limit).all()
+    quotes = query.distinct().offset(skip).limit(limit).all()
+    quotes = attach_ratings(db, quotes)
 
-    return attach_ratings(db, quotes)
+    return attach_translations(quotes, language)
 
 
-def get_trending_quotes(db: Session):
+def get_trending_quotes(
+    db: Session,
+    language: str = "ru"
+):
     quotes = (
         db.query(QuoteModel)
         .filter(QuoteModel.is_deleted.is_(False))
@@ -626,10 +733,13 @@ def get_trending_quotes(db: Session):
         reverse=True
     )
 
-    return quotes
+    return attach_translations(quotes, language)
 
 
-def get_deleted_quotes(db: Session):
+def get_deleted_quotes(
+    db: Session,
+    language: str = "ru"
+):
     quotes = (
         db.query(QuoteModel)
         .filter(QuoteModel.is_deleted.is_(True))
@@ -637,7 +747,9 @@ def get_deleted_quotes(db: Session):
         .all()
     )
 
-    return attach_ratings(db, quotes)
+    quotes = attach_ratings(db, quotes)
+
+    return attach_translations(quotes, language)
 
 
 def restore_quote(db: Session, quote_id: int):

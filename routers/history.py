@@ -96,9 +96,7 @@ def clear_history(
     return clear_user_history(db, user_id)
 
 
-@router.get(
-    "/most-viewed"
-)
+@router.get("/most-viewed")
 def most_viewed(
     limit: int = 10,
     db: Session = Depends(get_db),

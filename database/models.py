@@ -3,6 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Integer,
@@ -243,6 +244,10 @@ class QuoteTranslationModel(Base):
             "quote_id",
             "language",
             name="uq_quote_translation_language"
+        ),
+        CheckConstraint(
+            "language IN ('ru', 'en', 'uz')",
+            name="ck_quote_translation_language"
         ),
     )
 
@@ -517,6 +522,13 @@ class QuoteHistoryModel(Base):
 
     text: Mapped[str] = mapped_column(
         String(1000),
+        nullable=False
+    )
+
+    language: Mapped[str] = mapped_column(
+        String(10),
+        default="ru",
+        server_default="ru",
         nullable=False
     )
 

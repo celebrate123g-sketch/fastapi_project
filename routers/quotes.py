@@ -1,797 +1,449 @@
-from fastapi import HTTPException
-from sqlalchemy import desc, func, or_
+
+from typing import Optional, Literal
+
+from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.orm import Session
+from fastapi.templating import Jinja2Templates
 
-from database.models import (
-    QuoteModel,
-    QuoteViewModel,
-    QuoteRatingModel,
-    UserModel,
-    user_likes,
-    user_favorites
-)
-
+from database.database import get_db
+from database.models import UserModel, user_likes, user_favorites
+from dependencies.auth import get_current_user, get_admin_user
 from schemas.quote import QuoteCreate, QuoteUpdate
 
-from services.log_service import create_log
-from services.history_service import save_quote_history
-from services.duplicate_service import find_duplicate_quote
+from services.quote_service import (
+    add_to_favorites,
+    create_quote,
+    delete_quote,
+    get_all_quotes,
+    get_deleted_quotes,
+    get_favorite_quotes,
+    get_most_viewed_quotes,
+    get_quote_by_id,
+    get_quotes_by_category,
+    get_random_quote,
+    get_trending_quotes,
+    increment_views,
+    like_quote,
+    remove_from_favorites,
+    search_quotes,
+    unlike_quote,
+    update_quote,
+    restore_quote,
+    force_delete_quote,
+    clear_trash,
+    restore_all_quotes,
+    count_search_quotes,
+)
+
+templates = Jinja2Templates(directory="templates")
+
+router = APIRouter(tags=["Quotes"])
+
+Language = Literal["ru", "en", "uz"]
 
 
-def attach_translation(quote: QuoteModel, language: str = "ru"):
-    translation = next(
-        (
-            item for item in quote.translations
-            if item.language == language
-        ),
-        None
-    )
-
-    quote.localized_text = (
-        translation.text if translation else quote.text
-    )
-
-    return quote
-
-
-def attach_translations(
-    quotes: list[QuoteModel],
-    language: str = "ru"
-):
-    for quote in quotes:
-        attach_translation(quote, language)
-
-    return quotes
-
-
-def attach_rating(db: Session, quote: QuoteModel):
-    rating_data = (
-        db.query(
-            func.avg(QuoteRatingModel.rating),
-            func.count(QuoteRatingModel.id)
-        )
-        .filter(QuoteRatingModel.quote_id == quote.id)
-        .first()
-    )
-
-    average = rating_data[0] or 0
-    count = rating_data[1] or 0
-
-    quote.average_rating = round(average, 2)
-    quote.ratings_count = count
-
-    return quote
-
-
-def attach_ratings(db: Session, quotes: list[QuoteModel]):
-    if not quotes:
-        return quotes
-
-    quote_ids = [quote.id for quote in quotes]
-
-    ratings = (
-        db.query(
-            QuoteRatingModel.quote_id,
-            func.avg(QuoteRatingModel.rating),
-            func.count(QuoteRatingModel.id)
-        )
-        .filter(QuoteRatingModel.quote_id.in_(quote_ids))
-        .group_by(QuoteRatingModel.quote_id)
-        .all()
-    )
-
-    ratings_dict = {
-        quote_id: (average or 0, count or 0)
-        for quote_id, average, count in ratings
+@router.get("/")
+def home():
+    return {
+        "message": "Quotes API is running!"
     }
 
-    for quote in quotes:
-        average, count = ratings_dict.get(quote.id, (0, 0))
-        quote.average_rating = round(average, 2)
-        quote.ratings_count = count
 
-    return quotes
-
-
-def get_all_quotes(
-    db: Session,
-    skip: int = 0,
-    limit: int = 10,
-    sort: str = "newest"
-):
-    query = db.query(QuoteModel).filter(
-        QuoteModel.is_deleted.is_(False)
-    )
-
-    if sort == "newest":
-        query = query.order_by(desc(QuoteModel.created_at))
-    elif sort == "oldest":
-        query = query.order_by(QuoteModel.created_at)
-    elif sort == "likes":
-        query = query.order_by(desc(QuoteModel.likes))
-    elif sort == "views":
-        query = query.order_by(desc(QuoteModel.views))
-    elif sort == "author":
-        query = query.order_by(QuoteModel.author)
-    elif sort == "rating":
-        quotes = query.all()
-        quotes = attach_ratings(db, quotes)
-        quotes.sort(
-            key=lambda quote: quote.average_rating,
-            reverse=True
-        )
-        quotes = quotes[skip:skip + limit]
-        return attach_translations(quotes)
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid sort type."
-        )
-
-    quotes = query.offset(skip).limit(limit).all()
-    quotes = attach_ratings(db, quotes)
-
-    return attach_translations(quotes)
-
-
-def get_random_quote(db: Session):
-    quote = (
-        db.query(QuoteModel)
-        .filter(QuoteModel.is_deleted.is_(False))
-        .order_by(func.random())
-        .first()
-    )
-
-    if quote is None:
-        raise HTTPException(
-            status_code=404,
-            detail="No quotes found."
-        )
-
-    quote = attach_rating(db, quote)
-
-    return attach_translation(quote)
-
-
-def get_quote_by_id(db: Session, quote_id: int):
-    quote = (
-        db.query(QuoteModel)
-        .filter(
-            QuoteModel.id == quote_id,
-            QuoteModel.is_deleted.is_(False)
-        )
-        .first()
-    )
-
-    if quote is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Quote not found."
-        )
-
-    quote = attach_rating(db, quote)
-
-    return attach_translation(quote)
-
-
-def increment_views(db: Session, quote_id: int):
-    quote = (
-        db.query(QuoteModel)
-        .filter(
-            QuoteModel.id == quote_id,
-            QuoteModel.is_deleted.is_(False)
-        )
-        .first()
-    )
-
-    if quote is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Quote not found."
-        )
-
-    quote.views += 1
-
-    db.add(
-        QuoteViewModel(quote_id=quote.id)
-    )
-
-    db.commit()
-    db.refresh(quote)
-
-    save_quote_history(db, quote)
-
-    quote = attach_rating(db, quote)
-
-    return attach_translation(quote)
-
-
-def create_quote(
-    db: Session,
+@router.post("/quotes")
+def add_quote(
     quote: QuoteCreate,
-    user_id: int
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    duplicate = find_duplicate_quote(db, quote.text)
-
-    if duplicate is not None:
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "message": "A very similar quote already exists.",
-                "similarity": duplicate["similarity"],
-                "quote_id": duplicate["quote"].id
-            }
-        )
-
-    new_quote = QuoteModel(
-        author=quote.author,
-        text=quote.text,
-        category=quote.category,
-        language=quote.language,
-        user_id=user_id
+    return create_quote(
+        db,
+        quote,
+        current_user.id
     )
 
-    db.add(new_quote)
-    db.commit()
-    db.refresh(new_quote)
 
-    new_quote = attach_rating(db, new_quote)
+@router.get("/quotes/random")
+def random_quote(
+    language: Language = "ru",
+    db: Session = Depends(get_db)
+):
+    return get_random_quote(
+        db,
+        language=language
+    )
 
-    return attach_translation(new_quote)
 
-
-def update_quote(
-    db: Session,
+@router.get("/quotes/{quote_id}")
+def read_quote(
     quote_id: int,
-    quote_data: QuoteUpdate
+    language: Language = "ru",
+    db: Session = Depends(get_db)
 ):
-    quote = (
-        db.query(QuoteModel)
+    return increment_views(
+        db,
+        quote_id,
+        language=language
+    )
+
+
+@router.put("/quotes/{quote_id}")
+def edit_quote(
+    quote_id: int,
+    quote: QuoteUpdate,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    existing_quote = get_quote_by_id(
+        db,
+        quote_id
+    )
+
+    if existing_quote.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only edit your own quotes."
+        )
+
+    return update_quote(
+        db,
+        quote_id,
+        quote
+    )
+
+
+@router.delete("/quotes/{quote_id}")
+def remove_quote(
+    quote_id: int,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    existing_quote = get_quote_by_id(
+        db,
+        quote_id
+    )
+
+    if existing_quote.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only delete your own quotes."
+        )
+
+    return delete_quote(
+        db,
+        quote_id
+    )
+
+
+@router.get("/quotes/category/{category}")
+def category_quotes(
+    category: str,
+    language: Language = "ru",
+    db: Session = Depends(get_db)
+):
+    return get_quotes_by_category(
+        db,
+        category,
+        language=language
+    )
+
+
+@router.get("/quotes/favorites")
+def favorites(
+    language: Language = "ru",
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return get_favorite_quotes(
+        db,
+        current_user.id,
+        language=language
+    )
+
+
+@router.put("/quotes/{quote_id}/favorite")
+def favorite(
+    quote_id: int,
+    language: Language = "ru",
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return add_to_favorites(
+        db,
+        quote_id,
+        current_user.id,
+        language=language
+    )
+
+
+@router.put("/quotes/{quote_id}/unfavorite")
+def unfavorite(
+    quote_id: int,
+    language: Language = "ru",
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return remove_from_favorites(
+        db,
+        quote_id,
+        current_user.id,
+        language=language
+    )
+
+
+@router.put("/quotes/{quote_id}/like")
+def like(
+    quote_id: int,
+    language: Language = "ru",
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return like_quote(
+        db,
+        quote_id,
+        current_user.id,
+        language=language
+    )
+
+
+@router.put("/quotes/{quote_id}/unlike")
+def unlike(
+    quote_id: int,
+    language: Language = "ru",
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return unlike_quote(
+        db,
+        quote_id,
+        current_user.id,
+        language=language
+    )
+
+
+@router.get("/quotes/{quote_id}/user-status")
+def quote_user_status(
+    quote_id: int,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    liked = (
+        db.query(user_likes)
         .filter(
-            QuoteModel.id == quote_id,
-            QuoteModel.is_deleted.is_(False)
+            user_likes.c.user_id == current_user.id,
+            user_likes.c.quote_id == quote_id
         )
         .first()
+        is not None
     )
 
-    if quote is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Quote not found."
-        )
-
-    duplicate = find_duplicate_quote(
-        db=db,
-        text=quote_data.text,
-        exclude_id=quote_id
-    )
-
-    if duplicate:
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "message": "A very similar quote already exists.",
-                "similarity": duplicate["similarity"],
-                "quote_id": duplicate["quote"].id,
-                "author": duplicate["quote"].author,
-                "text": duplicate["quote"].text
-            }
-        )
-
-    save_quote_history(db, quote)
-
-    quote.author = quote_data.author
-    quote.text = quote_data.text
-    quote.category = quote_data.category
-    quote.language = quote_data.language
-
-    db.commit()
-    db.refresh(quote)
-
-    create_log(db, "Updated quote", quote.id)
-
-    quote = attach_rating(db, quote)
-
-    return attach_translation(quote)
-
-
-def delete_quote(db: Session, quote_id: int):
-    quote = (
-        db.query(QuoteModel)
+    favorite = (
+        db.query(user_favorites)
         .filter(
-            QuoteModel.id == quote_id,
-            QuoteModel.is_deleted.is_(False)
+            user_favorites.c.user_id == current_user.id,
+            user_favorites.c.quote_id == quote_id
         )
         .first()
+        is not None
     )
-
-    if quote is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Quote not found."
-        )
-
-    save_quote_history(db, quote)
-
-    quote.is_deleted = True
-    quote.deleted_at = func.now()
-
-    db.commit()
-
-    create_log(db, "Moved quote to trash", quote.id)
 
     return {
-        "message": "Quote moved to trash successfully."
+        "liked": liked,
+        "favorite": favorite
     }
 
 
-def get_quotes_by_category(db: Session, category: str):
-    quotes = (
-        db.query(QuoteModel)
-        .filter(
-            QuoteModel.category == category,
-            QuoteModel.is_deleted.is_(False)
-        )
-        .all()
+@router.get("/quotes/popular")
+def popular_quotes(
+    language: Language = "ru",
+    db: Session = Depends(get_db)
+):
+    return get_all_quotes(
+        db,
+        sort="likes",
+        language=language
     )
 
-    quotes = attach_ratings(db, quotes)
 
-    return attach_translations(quotes)
-
-
-def get_favorite_quotes(db: Session, user_id: int):
-    quotes = (
-        db.query(QuoteModel)
-        .join(
-            user_favorites,
-            QuoteModel.id == user_favorites.c.quote_id
-        )
-        .filter(
-            user_favorites.c.user_id == user_id,
-            QuoteModel.is_deleted.is_(False)
-        )
-        .all()
+@router.get("/quotes/most-viewed")
+def most_viewed_quotes(
+    language: Language = "ru",
+    db: Session = Depends(get_db)
+):
+    return get_most_viewed_quotes(
+        db,
+        language=language
     )
 
-    quotes = attach_ratings(db, quotes)
 
-    return attach_translations(quotes)
+@router.get("/quotes/trending")
+def trending_quotes(
+    language: Language = "ru",
+    db: Session = Depends(get_db)
+):
+    return get_trending_quotes(
+        db,
+        language=language
+    )
 
 
-def add_to_favorites(
-    db: Session,
+@router.get("/quotes/search")
+def search(
+    author: Optional[str] = None,
+    text: Optional[str] = None,
+    category: Optional[str] = None,
+    language: Language = "ru",
+    db: Session = Depends(get_db)
+):
+    return search_quotes(
+        db,
+        author,
+        text,
+        category,
+        language=language
+    )
+
+
+@router.get("/trash")
+def trash(
+    language: Language = "ru",
+    current_user: UserModel = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    return get_deleted_quotes(
+        db,
+        language=language
+    )
+
+
+@router.put("/trash/{quote_id}/restore")
+def restore(
     quote_id: int,
-    user_id: int
+    current_user: UserModel = Depends(get_admin_user),
+    db: Session = Depends(get_db)
 ):
-    user = (
-        db.query(UserModel)
-        .filter(UserModel.id == user_id)
-        .first()
+    return restore_quote(
+        db,
+        quote_id
     )
 
-    if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found."
-        )
 
-    quote = (
-        db.query(QuoteModel)
-        .filter(
-            QuoteModel.id == quote_id,
-            QuoteModel.is_deleted.is_(False)
-        )
-        .first()
-    )
-
-    if quote is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Quote not found."
-        )
-
-    existing_favorite = (
-        db.query(user_favorites)
-        .filter(
-            user_favorites.c.user_id == user_id,
-            user_favorites.c.quote_id == quote_id
-        )
-        .first()
-    )
-
-    if not existing_favorite:
-        db.execute(
-            user_favorites.insert().values(
-                user_id=user_id,
-                quote_id=quote_id
-            )
-        )
-        db.commit()
-
-    quote = attach_rating(db, quote)
-
-    return attach_translation(quote)
-
-
-def remove_from_favorites(
-    db: Session,
+@router.delete("/trash/{quote_id}/force")
+def force_delete(
     quote_id: int,
-    user_id: int
+    current_user: UserModel = Depends(get_admin_user),
+    db: Session = Depends(get_db)
 ):
-    quote = (
-        db.query(QuoteModel)
-        .filter(
-            QuoteModel.id == quote_id,
-            QuoteModel.is_deleted.is_(False)
-        )
-        .first()
+    return force_delete_quote(
+        db,
+        quote_id
     )
 
-    if quote is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Quote not found."
-        )
 
-    existing_favorite = (
-        db.query(user_favorites)
-        .filter(
-            user_favorites.c.user_id == user_id,
-            user_favorites.c.quote_id == quote_id
-        )
-        .first()
-    )
-
-    if existing_favorite:
-        db.execute(
-            user_favorites.delete().where(
-                user_favorites.c.user_id == user_id,
-                user_favorites.c.quote_id == quote_id
-            )
-        )
-        db.commit()
-
-    quote = attach_rating(db, quote)
-
-    return attach_translation(quote)
-
-
-def like_quote(
-    db: Session,
-    quote_id: int,
-    user_id: int
+@router.delete("/trash")
+def empty_trash(
+    current_user: UserModel = Depends(get_admin_user),
+    db: Session = Depends(get_db)
 ):
-    user = (
-        db.query(UserModel)
-        .filter(UserModel.id == user_id)
-        .first()
-    )
-
-    if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found."
-        )
-
-    quote = (
-        db.query(QuoteModel)
-        .filter(
-            QuoteModel.id == quote_id,
-            QuoteModel.is_deleted.is_(False)
-        )
-        .first()
-    )
-
-    if quote is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Quote not found."
-        )
-
-    existing_like = (
-        db.query(user_likes)
-        .filter(
-            user_likes.c.user_id == user_id,
-            user_likes.c.quote_id == quote_id
-        )
-        .first()
-    )
-
-    if not existing_like:
-        db.execute(
-            user_likes.insert().values(
-                user_id=user_id,
-                quote_id=quote_id
-            )
-        )
-
-        quote.likes += 1
-        db.commit()
-        db.refresh(quote)
-
-    quote = attach_rating(db, quote)
-
-    return attach_translation(quote)
+    return clear_trash(db)
 
 
-def unlike_quote(
-    db: Session,
-    quote_id: int,
-    user_id: int
+@router.put("/trash/restore-all")
+def restore_all(
+    current_user: UserModel = Depends(get_admin_user),
+    db: Session = Depends(get_db)
 ):
-    quote = (
-        db.query(QuoteModel)
-        .filter(
-            QuoteModel.id == quote_id,
-            QuoteModel.is_deleted.is_(False)
-        )
-        .first()
-    )
-
-    if quote is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Quote not found."
-        )
-
-    existing_like = (
-        db.query(user_likes)
-        .filter(
-            user_likes.c.user_id == user_id,
-            user_likes.c.quote_id == quote_id
-        )
-        .first()
-    )
-
-    if existing_like:
-        db.execute(
-            user_likes.delete().where(
-                user_likes.c.user_id == user_id,
-                user_likes.c.quote_id == quote_id
-            )
-        )
-
-        if quote.likes > 0:
-            quote.likes -= 1
-
-        db.commit()
-        db.refresh(quote)
-
-    quote = attach_rating(db, quote)
-
-    return attach_translation(quote)
+    return restore_all_quotes(db)
 
 
-def get_most_viewed_quotes(db: Session):
-    quotes = (
-        db.query(QuoteModel)
-        .filter(QuoteModel.is_deleted.is_(False))
-        .order_by(desc(QuoteModel.views))
-        .all()
-    )
-
-    quotes = attach_ratings(db, quotes)
-
-    return attach_translations(quotes)
-
-
-def count_search_quotes(
-    db: Session,
-    author: str | None = None,
-    text: str | None = None,
-    category: str | None = None
-):
-    query = db.query(QuoteModel).filter(
-        QuoteModel.is_deleted.is_(False)
-    )
-
-    if author:
-        query = query.filter(
-            QuoteModel.author.ilike(f"%{author}%")
-        )
-
-    if text:
-        query = query.filter(
-            QuoteModel.text.ilike(f"%{text}%")
-        )
-
-    if category:
-        query = query.filter(
-            QuoteModel.category == category
-        )
-
-    return query.count()
-
-
-def search_quotes(
-    db: Session,
-    author: str | None = None,
-    text: str | None = None,
-    category: str | None = None,
+@router.get("/quotes-page")
+def quotes_page(
+    request: Request,
+    search: Optional[str] = None,
+    category: Optional[str] = None,
     sort: str = "newest",
-    skip: int = 0,
-    limit: int = 10
+    language: Language = "ru",
+    page: int = 1,
+    db: Session = Depends(get_db)
 ):
-    query = db.query(QuoteModel).filter(
-        QuoteModel.is_deleted.is_(False)
+    limit = 10
+
+    if page < 1:
+        page = 1
+
+    total_quotes = count_search_quotes(
+        db,
+        text=search,
+        category=category,
+        language=language
     )
 
-    if author:
-        query = query.filter(
-            QuoteModel.author.ilike(f"%{author}%")
-        )
-
-    if text:
-        query = query.filter(
-            QuoteModel.text.ilike(f"%{text}%")
-        )
-
-    if category:
-        query = query.filter(
-            QuoteModel.category == category
-        )
-
-    if sort == "newest":
-        query = query.order_by(desc(QuoteModel.created_at))
-    elif sort == "oldest":
-        query = query.order_by(QuoteModel.created_at)
-    elif sort == "likes":
-        query = query.order_by(desc(QuoteModel.likes))
-    elif sort == "views":
-        query = query.order_by(desc(QuoteModel.views))
-    elif sort == "author":
-        query = query.order_by(QuoteModel.author)
-    elif sort == "rating":
-        quotes = query.all()
-        quotes = attach_ratings(db, quotes)
-        quotes.sort(
-            key=lambda quote: quote.average_rating,
-            reverse=True
-        )
-        quotes = quotes[skip:skip + limit]
-
-        return attach_translations(quotes)
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid sort type."
-        )
-
-    quotes = query.offset(skip).limit(limit).all()
-    quotes = attach_ratings(db, quotes)
-
-    return attach_translations(quotes)
-
-
-def get_trending_quotes(db: Session):
-    quotes = (
-        db.query(QuoteModel)
-        .filter(QuoteModel.is_deleted.is_(False))
-        .all()
+    total_pages = max(
+        1,
+        (total_quotes + limit - 1) // limit
     )
 
-    quotes = attach_ratings(db, quotes)
+    if page > total_pages:
+        page = total_pages
 
-    quotes.sort(
-        key=lambda quote: (
-            quote.likes * 3
-            + quote.views * 0.1
-            + quote.comments_count * 5
-            + quote.average_rating * 10
-        ),
-        reverse=True
+    skip = (page - 1) * limit
+
+    quotes = search_quotes(
+        db,
+        text=search,
+        category=category,
+        sort=sort,
+        skip=skip,
+        limit=limit,
+        language=language
     )
 
-    return attach_translations(quotes)
-
-
-def get_deleted_quotes(db: Session):
-    quotes = (
-        db.query(QuoteModel)
-        .filter(QuoteModel.is_deleted.is_(True))
-        .order_by(desc(QuoteModel.deleted_at))
-        .all()
+    return templates.TemplateResponse(
+        "quotes.html",
+        {
+            "request": request,
+            "quotes": quotes,
+            "search": search or "",
+            "selected_category": category or "",
+            "selected_sort": sort,
+            "selected_language": language,
+            "current_page": page,
+            "total_pages": total_pages,
+            "has_previous": page > 1,
+            "has_next": page < total_pages
+        }
     )
 
-    quotes = attach_ratings(db, quotes)
 
-    return attach_translations(quotes)
-
-
-def restore_quote(db: Session, quote_id: int):
-    quote = (
-        db.query(QuoteModel)
-        .filter(
-            QuoteModel.id == quote_id,
-            QuoteModel.is_deleted.is_(True)
-        )
-        .first()
+@router.get("/quotes-page/{quote_id}")
+def quote_page(
+    request: Request,
+    quote_id: int,
+    language: Language = "ru",
+    db: Session = Depends(get_db)
+):
+    quote = get_quote_by_id(
+        db,
+        quote_id,
+        language=language
     )
 
-    if quote is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Quote not found in trash."
-        )
-
-    quote.is_deleted = False
-    quote.deleted_at = None
-
-    db.commit()
-    db.refresh(quote)
-
-    create_log(db, "Restored quote", quote.id)
-
-    return {
-        "message": "Quote restored successfully."
-    }
-
-
-def force_delete_quote(db: Session, quote_id: int):
-    quote = (
-        db.query(QuoteModel)
-        .filter(
-            QuoteModel.id == quote_id,
-            QuoteModel.is_deleted.is_(True)
-        )
-        .first()
+    return templates.TemplateResponse(
+        "quote.html",
+        {
+            "request": request,
+            "quote": quote,
+            "selected_language": language
+        }
     )
 
-    if quote is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Quote not found in trash."
-        )
 
-    db.delete(quote)
-    db.commit()
-
-    create_log(db, "Permanently deleted quote", quote_id)
-
-    return {
-        "message": "Quote permanently deleted."
-    }
-
-
-def clear_trash(db: Session):
-    quotes = (
-        db.query(QuoteModel)
-        .filter(QuoteModel.is_deleted.is_(True))
-        .all()
+@router.get("/favorites")
+def favorites_page(
+    request: Request
+):
+    return templates.TemplateResponse(
+        "favorites.html",
+        {
+            "request": request
+        }
     )
-
-    count = len(quotes)
-
-    for quote in quotes:
-        db.delete(quote)
-
-    db.commit()
-
-    create_log(db, "Cleared trash", None)
-
-    return {
-        "message": f"{count} quotes permanently deleted."
-    }
-
-
-def restore_all_quotes(db: Session):
-    quotes = (
-        db.query(QuoteModel)
-        .filter(QuoteModel.is_deleted.is_(True))
-        .all()
-    )
-
-    count = len(quotes)
-
-    for quote in quotes:
-        quote.is_deleted = False
-        quote.deleted_at = None
-
-    db.commit()
-
-    create_log(db, "Restored all quotes", None)
-
-    return {
-        "message": f"{count} quotes restored."
-    }

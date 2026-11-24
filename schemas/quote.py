@@ -49,6 +49,7 @@ class QuoteResponse(QuoteBase):
     id: int
 
     language: Language
+    localized_text: str | None = None
     translations: list[QuoteTranslationResponse] = []
 
     favorite: bool

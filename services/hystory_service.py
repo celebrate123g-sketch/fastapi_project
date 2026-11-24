@@ -106,7 +106,10 @@ def get_most_viewed(
     return (
         db.query(QuoteModel)
         .filter(QuoteModel.is_deleted.is_(False))
-        .order_by(desc(QuoteModel.views))
+        .order_by(
+            desc(QuoteModel.views),
+            desc(QuoteModel.id)
+        )
         .limit(limit)
         .all()
     )
@@ -118,7 +121,7 @@ def get_history_statistics(
     total_views = (
         db.query(func.count(QuoteViewModel.id))
         .scalar()
-    )
+    ) or 0
 
     unique_users = (
         db.query(
@@ -126,8 +129,9 @@ def get_history_statistics(
                 func.distinct(QuoteViewModel.user_id)
             )
         )
+        .filter(QuoteViewModel.user_id.isnot(None))
         .scalar()
-    )
+    ) or 0
 
     unique_quotes = (
         db.query(
@@ -136,7 +140,7 @@ def get_history_statistics(
             )
         )
         .scalar()
-    )
+    ) or 0
 
     today = date.today()
 
@@ -146,7 +150,7 @@ def get_history_statistics(
             func.date(QuoteViewModel.created_at) == today
         )
         .scalar()
-    )
+    ) or 0
 
     return {
         "total_views": total_views,

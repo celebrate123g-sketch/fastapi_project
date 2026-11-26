@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from database.models import (
     QuoteModel,
     CommentModel,
-    QuoteLikeModel,
-    QuoteRatingModel
+    QuoteRatingModel,
+    user_likes
 )
 
 
@@ -120,8 +120,8 @@ def get_user_badges(
     )
 
     total_likes = (
-        db.query(func.count(QuoteLikeModel.id))
-        .filter(QuoteLikeModel.quote_id.in_(quote_ids))
+        db.query(func.count(user_likes.c.quote_id))
+        .filter(user_likes.c.quote_id.in_(quote_ids))
         .scalar()
     )
 
@@ -195,8 +195,8 @@ def get_quote_badges(
         return None
 
     likes = (
-        db.query(func.count(QuoteLikeModel.id))
-        .filter(QuoteLikeModel.quote_id == quote_id)
+        db.query(func.count(user_likes.c.user_id))
+        .filter(user_likes.c.quote_id == quote_id)
         .scalar()
     )
 

@@ -1,8 +1,7 @@
-
+from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -12,6 +11,7 @@ from database.database import (
     migrate_user_role,
     migrate_comment_user_id,
     migrate_quote_language,
+    migrate_quote_history_language,
 )
 
 from routers.quotes import router as quotes_router
@@ -48,6 +48,14 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+@app.get("/")
+def home(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={}
+    )
+
 templates = Jinja2Templates(
     directory="templates"
 )
@@ -61,6 +69,12 @@ app.mount(
     "/uploads",
     StaticFiles(directory="uploads"),
     name="uploads"
+)
+
+app.mount(
+    "/static",
+    StaticFiles(directory="static"),
+    name="static"
 )
 
 app.include_router(quotes_router)

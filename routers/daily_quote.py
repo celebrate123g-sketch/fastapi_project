@@ -7,7 +7,7 @@ from database.database import get_db
 
 from schemas.daily_quote import DailyQuoteResponse
 
-from services.daily_quote_service import (
+from services.daily_quote import (
     get_daily_quote,
     get_daily_quote_by_date
 )

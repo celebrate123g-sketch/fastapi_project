@@ -1,15 +1,15 @@
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database.models import (
     QuoteModel,
-    AuthorModel,
     CommentModel,
     ReportModel,
     QuoteRatingModel
 )
 
-from services.daily_quote_service import get_daily_quote
+from services.daily_quote import get_daily_quote
 
 
 def get_dashboard(db: Session):
@@ -21,7 +21,8 @@ def get_dashboard(db: Session):
     )
 
     total_authors = (
-        db.query(func.count(AuthorModel.id))
+        db.query(func.count(func.distinct(QuoteModel.author)))
+        .filter(QuoteModel.is_deleted.is_(False))
         .scalar()
     )
 

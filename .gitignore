@@ -1,0 +1,7 @@
+.env
+services.zip
+.venv/
+__pycache__/
+*.pyc
+*.db
+.idea/

@@ -1,4 +1,3 @@
-
 from datetime import date
 
 from fastapi import HTTPException
@@ -7,14 +6,10 @@ from sqlalchemy.orm import Session
 from database.models import QuoteModel
 
 
-def get_daily_quote(
-    db: Session
-):
+def get_daily_quote(db: Session):
     quotes = (
         db.query(QuoteModel)
-        .filter(
-            QuoteModel.is_deleted.is_(False)
-        )
+        .filter(QuoteModel.is_deleted.is_(False))
         .order_by(QuoteModel.id)
         .all()
     )
@@ -26,7 +21,6 @@ def get_daily_quote(
         )
 
     today = date.today()
-
     index = today.toordinal() % len(quotes)
 
     return {
@@ -35,15 +29,10 @@ def get_daily_quote(
     }
 
 
-def get_daily_quote_by_date(
-    db: Session,
-    target_date: date
-):
+def get_daily_quote_by_date(db: Session, target_date: date):
     quotes = (
         db.query(QuoteModel)
-        .filter(
-            QuoteModel.is_deleted.is_(False)
-        )
+        .filter(QuoteModel.is_deleted.is_(False))
         .order_by(QuoteModel.id)
         .all()
     )
